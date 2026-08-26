@@ -1,1 +1,18 @@
-{"0": "Map, Route & Station Rendering", "1": "Backend Route Handlers & Analytics Core", "2": "App Shell, Auth UI & Admin Console", "3": "Password Hashing & Supabase Seed Script", "4": "NPM Package Manifest", "5": "Make-First Vehicle Cascade & EV Profile", "6": "EPA/Atlas External APIs & Grid Stress", "7": "Auth Session & Login Flow", "8": "Admin Station Edit & Overrides", "9": "Home Tab Map Filters & Search", "10": "Trip Planner SOC/Range Inputs", "11": "File-Backed Fallback Store", "12": "MLP Recommendation Network", "13": "Vercel Deployment Config", "14": "Open Charge Map Data Source"}
+{
+  "0": "script.js",
+  "1": "handler.js",
+  "2": "index.html - single-page shell (login, user app, admin console)",
+  "3": "auth.js",
+  "4": "package.json",
+  "5": "EV Profile Setup Modal - make-then-model cascade (#vehicle-setup-modal)",
+  "6": "GET /api/grid-demand",
+  "7": "logChargerDiversion",
+  "8": "syncDatabaseState",
+  "9": "Home / Map Tab (#panel-home)",
+  "10": "GridSync — architecture quick reference",
+  "11": "server.js",
+  "12": "evaluateStationWithML",
+  "13": "vercel.json",
+  "14": "GET /api/ocm-chargers",
+  "15": "sw.js"
+}
