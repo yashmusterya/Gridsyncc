@@ -6,7 +6,7 @@
 // are the whole point of this app - serving a stale cached copy of any of them
 // would show a driver a charger that is actually occupied or broken.
 
-const CACHE_VERSION = 'gridsync-v2';
+const CACHE_VERSION = 'gridsync-v3';
 const APP_SHELL = [
     '/',
     '/index.html',
@@ -67,7 +67,31 @@ self.addEventListener('fetch', event => {
         return;
     }
 
-    // Static assets: cache-first, refreshed in the background.
+    // Code and config (script.js, style.css, the manifest): NETWORK-FIRST.
+    //
+    // These were originally cache-first, which meant a browser kept running the
+    // previously-cached script.js after a deploy - shipping a fix (including a
+    // security fix) didn't actually reach anyone still holding a warm cache.
+    // The cache is now only a fallback for when the network is unavailable.
+    const isCode = /\.(?:js|css|webmanifest)$/.test(url.pathname);
+    if (isCode) {
+        event.respondWith(
+            fetch(request)
+                .then(response => {
+                    if (response && response.status === 200) {
+                        const copy = response.clone();
+                        caches.open(CACHE_VERSION).then(c => c.put(request, copy)).catch(() => {});
+                    }
+                    return response;
+                })
+                .catch(() => caches.match(request))
+        );
+        return;
+    }
+
+    // Immutable-ish assets (icons, images, fonts): cache-first with a
+    // background refresh. These are safe to serve stale - a slightly old icon
+    // is not a correctness problem the way stale code is.
     event.respondWith(
         caches.match(request).then(cached => {
             const network = fetch(request).then(response => {
