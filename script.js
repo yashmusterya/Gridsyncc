@@ -4130,12 +4130,18 @@ function renderOpsCounts() {
         badge.classList.toggle('hidden', open === 0);
     }
 
+    const isPersistent = opsQueueData.dataSource === 'SUPABASE';
+
     const sourceBadge = document.getElementById('ops-data-source');
     if (sourceBadge) {
-        const isPersistent = opsQueueData.dataSource === 'SUPABASE';
         sourceBadge.textContent = isPersistent ? 'PERSISTENT (SUPABASE)' : 'SESSION-ONLY (NOT CONFIGURED)';
         sourceBadge.className = 'impact-source-badge' + (isPersistent ? ' persistent' : ' session-only');
     }
+
+    // Without Supabase this queue silently loses reports on a cold start, which
+    // an operator has no way to detect from the queue itself.
+    const warning = document.getElementById('ops-ephemeral-warning');
+    if (warning) warning.classList.toggle('hidden', isPersistent);
 }
 
 window.setOpsFilter = function(filter) {

@@ -4336,3 +4336,34 @@ html, body {
         flex: 1;
     }
 }
+
+
+/* Ephemeral-storage warning on the Ops Queue (shown when Supabase is absent). */
+.ops-ephemeral-warning {
+    display: flex;
+    align-items: flex-start;
+    gap: 11px;
+    background: rgba(234, 179, 8, 0.09);
+    border: 1px solid rgba(234, 179, 8, 0.34);
+    border-radius: 10px;
+    padding: 13px 15px;
+    margin: 14px 0 4px;
+    color: #cbd5e1;
+    font-size: 0.79rem;
+    line-height: 1.55;
+}
+
+.ops-ephemeral-warning strong { color: #fde047; }
+
+.ops-ephemeral-warning .material-symbols-outlined {
+    color: #eab308;
+    font-size: 20px;
+    flex-shrink: 0;
+}
+
+.ops-ephemeral-warning code {
+    background: rgba(148, 163, 184, 0.16);
+    padding: 1px 5px;
+    border-radius: 4px;
+    font-size: 0.74rem;
+}

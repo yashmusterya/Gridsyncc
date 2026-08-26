@@ -12,3 +12,7 @@ node_modules
 scripts
 supabase
 README.md
+
+# Local dev server only - Vercel serves the static files and api/handler.js
+# itself, and without this server.js gets published as a public static asset.
+server.js

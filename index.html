@@ -817,6 +817,20 @@
                 <span class="impact-source-badge" id="ops-data-source">--</span>
             </div>
 
+            <!-- Shown only when Supabase isn't configured. An ops queue that
+                 silently drops reports is worse than no queue, so this says so
+                 plainly rather than leaving it to a small badge. -->
+            <div class="ops-ephemeral-warning hidden" id="ops-ephemeral-warning" role="status">
+                <span class="material-symbols-outlined">warning</span>
+                <div>
+                    <strong>This queue is not durable.</strong>
+                    Supabase isn't configured, so driver reports and your triage decisions are held
+                    in the server's temporary storage and are lost whenever the serverless function
+                    cold-starts. Set <code>SUPABASE_URL</code> and <code>SUPABASE_KEY</code> (see
+                    <code>supabase/schema.sql</code>) to keep them.
+                </div>
+            </div>
+
             <div class="admin-stats-grid ops-stats-grid">
                 <div class="stat-card red">
                     <span class="stat-title">CRITICAL — OPEN</span>
