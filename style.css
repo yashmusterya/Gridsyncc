@@ -4335,6 +4335,11 @@ html, body {
         min-height: 44px;
         flex: 1;
     }
+
+    /* Match the 44px touch-target floor the rest of the app uses. */
+    .btn-export-csv {
+        min-height: 44px;
+    }
 }
 
 
