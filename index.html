@@ -4,6 +4,26 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>GridSync — Unified Live EV Charger Map</title>
+
+    <meta name="description" content="Grid-aware EV trip planning across India: live charger availability, dynamic time-of-use pricing and community-verified station status.">
+    <meta name="theme-color" content="#10b981">
+    <meta name="color-scheme" content="dark light">
+
+    <!-- Installable PWA -->
+    <link rel="manifest" href="/manifest.webmanifest">
+    <link rel="icon" href="/favicon.png" type="image/png">
+    <link rel="apple-touch-icon" href="/icons/icon-192.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="GridSync">
+
+    <!-- Link previews -->
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="GridSync — Live EV Charger Map & Trip Planner">
+    <meta property="og:description" content="Grid-aware EV trip planning across India: live charger availability, dynamic pricing and community-verified station status.">
+    <meta property="og:image" content="/icons/icon-512.png">
+    <meta name="twitter:card" content="summary">
+
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -31,6 +51,17 @@
     <!-- Chart.js for Admin Analytics -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
     <script src="script.js" defer></script>
+
+    <!-- Service worker: caches the app shell only, never /api/* - see sw.js -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function () {
+                navigator.serviceWorker.register('/sw.js').catch(function (err) {
+                    console.warn('Service worker registration failed:', err);
+                });
+            });
+        }
+    </script>
 </head>
 <body class="dark-theme">
 
@@ -91,15 +122,16 @@
                     <a href="#" class="forgot-pass-link" onclick="alert('Demo: Use user@gridsync.in / user123 or admin@gridsync.in / admin123')">Forgot Password?</a>
                 </div>
 
+                <div id="login-error" class="login-error hidden" role="alert" aria-live="assertive"></div>
+
                 <button type="submit" class="btn-login">LOGIN</button>
             </form>
 
-            <!-- Sign in with Google Button (Auth Simulation trigger) -->
-            <button class="btn-google-auth" onclick="triggerGoogleAuthLogin()">
-                <svg viewBox="0 0 24 24" width="18" height="18" class="google-logo">
-                    <path fill="#ea4335" d="M12.24 10.285V14.4h6.887c-.648 2.41-2.519 4.2-5.135 4.2-3.482 0-6.31-2.828-6.31-6.31s2.828-6.31 6.31-6.31c1.583 0 3.027.585 4.135 1.551l3.056-3.056C19.123 2.502 15.892 1.5 12.24 1.5 6.033 1.5 1 6.533 1 12.74s5.033 11.24 11.24 11.24c6.126 0 10.967-4.305 10.967-11.24 0-.663-.06-1.302-.177-1.955H12.24z"/>
-                </svg>
-                <span>Sign in with Google</span>
+            <!-- One-click sign-in to the shared demo driver account. This is not
+                 Google OAuth and no longer claims to be - see triggerDemoQuickLogin(). -->
+            <button class="btn-demo-auth" onclick="triggerDemoQuickLogin()">
+                <span class="material-symbols-outlined">bolt</span>
+                <span>Quick sign-in as demo driver</span>
             </button>
 
             <div class="login-footer">
@@ -114,17 +146,17 @@
         </div>
     </section>
 
-    <!-- ==================== GOOGLE AUTH SIMULATION OVERLAY ==================== -->
-    <div id="google-auth-overlay" class="modal-overlay hidden">
+    <!-- ==================== DEMO QUICK SIGN-IN OVERLAY ==================== -->
+    <div id="demo-auth-overlay" class="modal-overlay hidden">
         <div class="google-auth-card">
             <div class="g-logo-spinner">
-                <svg viewBox="0 0 24 24" width="48" height="48" class="google-spinner-logo">
-                    <path fill="#ea4335" d="M12.24 10.285V14.4h6.887c-.648 2.41-2.519 4.2-5.135 4.2-3.482 0-6.31-2.828-6.31-6.31s2.828-6.31 6.31-6.31c1.583 0 3.027.585 4.135 1.551l3.056-3.056C19.123 2.502 15.892 1.5 12.24 1.5 6.033 1.5 1 6.533 1 12.74s5.033 11.24 11.24 11.24c6.126 0 10.967-4.305 10.967-11.24 0-.663-.06-1.302-.177-1.955H12.24z"/>
+                <svg viewBox="0 0 24 24" width="48" height="48" fill="#10b981">
+                    <path d="M11 6L6.5 13h4.5v5l4.5-7h-4.5z"/>
                 </svg>
                 <div class="spinner-circle"></div>
             </div>
-            <h3 style="color: #ffffff;">Verifying with Google Accounts...</h3>
-            <p id="g-auth-status">Connecting to secure Google OAuth service...</p>
+            <h3 style="color: #ffffff;">Signing in…</h3>
+            <p id="demo-auth-status">Opening the GridSync demo driver account.</p>
         </div>
     </div>
 
@@ -615,6 +647,13 @@
                 <h2>GridSync Admin Dashboard</h2>
             </div>
             <div class="admin-profile-row">
+                <span class="admin-sync-state" id="admin-sync-state" title="Last dashboard refresh">
+                    <span class="sync-dot"></span>
+                    <span id="admin-sync-label">Syncing…</span>
+                </span>
+                <button class="btn-admin-refresh" id="admin-refresh-btn" onclick="refreshAdminData(true)" title="Refresh dashboard data">
+                    <span class="material-symbols-outlined">refresh</span>
+                </button>
                 <span id="admin-user-name">GridSync Controller</span>
                 <button class="btn-admin-logout" onclick="handleAuthLogout()">Logout</button>
             </div>
@@ -622,6 +661,10 @@
 
         <nav id="admin-top-navigation">
             <button class="admin-nav-btn active" id="adm-nav-dash" onclick="switchAdminTab('dash')">Overview</button>
+            <button class="admin-nav-btn" id="adm-nav-ops" onclick="switchAdminTab('ops')">
+                Ops Queue
+                <span class="nav-badge hidden" id="adm-ops-badge">0</span>
+            </button>
             <button class="admin-nav-btn" id="adm-nav-map" onclick="switchAdminTab('map')">Live Control Map</button>
             <button class="admin-nav-btn" id="adm-nav-stations" onclick="switchAdminTab('stations')">Manage Stations</button>
             <button class="admin-nav-btn" id="adm-nav-analytics" onclick="switchAdminTab('analytics')">System Analytics</button>
@@ -712,24 +755,33 @@
                     <span class="stat-value" id="stat-faulty-chargers">0</span>
                     <span class="stat-sub">Community / Telemetry flags</span>
                 </div>
+                <div class="stat-card">
+                    <span class="stat-title">NETWORK HEALTH</span>
+                    <span class="stat-value" id="stat-network-health">--%</span>
+                    <span class="stat-sub">Connectors not faulted or offline</span>
+                </div>
             </div>
 
             <div class="dashboard-widgets-row">
                 <div class="widget-card half">
-                    <h3>Recent Community Fault Logs</h3>
+                    <div class="widget-header-row">
+                        <h3>Needs Attention</h3>
+                        <button class="btn-link-inline" onclick="switchAdminTab('ops')">Open queue →</button>
+                    </div>
                     <div class="table-container">
                         <table class="admin-table">
                             <thead>
                                 <tr>
-                                    <th>Station Name</th>
-                                    <th>Reported Status</th>
-                                    <th>Timestamp</th>
-                                    <th>User ID</th>
+                                    <th>Station</th>
+                                    <th>Severity</th>
+                                    <th>Reports</th>
+                                    <th>Last Flagged</th>
+                                    <th>State</th>
                                 </tr>
                             </thead>
                             <tbody id="admin-recent-reports">
                                 <tr>
-                                    <td colspan="4" class="no-data">No community logs registered.</td>
+                                    <td colspan="5" class="no-data">No community logs registered.</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -750,6 +802,62 @@
                         <p class="tel-desc">Real-time regional grid stress derived from posoco-sldc. Frequency current: <strong id="admin-freq-num">-- Hz</strong></p>
                     </div>
                 </div>
+            </div>
+        </section>
+
+        <!-- ADMIN TAB: OPS QUEUE -->
+        <!-- Triage surface for community fault reports. The Overview tab shows
+             that faults exist; this is where an operator actually works them. -->
+        <section id="admin-panel-ops" class="admin-tab-panel">
+            <div class="ops-header-row">
+                <div>
+                    <h3 class="impact-section-title">Operations Queue</h3>
+                    <p class="ops-subtitle">Stations flagged by drivers, ranked by severity. Acknowledge an item when someone is looking at it, resolve it once the charger is confirmed working.</p>
+                </div>
+                <span class="impact-source-badge" id="ops-data-source">--</span>
+            </div>
+
+            <div class="admin-stats-grid ops-stats-grid">
+                <div class="stat-card red">
+                    <span class="stat-title">CRITICAL — OPEN</span>
+                    <span class="stat-value" id="ops-count-critical">0</span>
+                    <span class="stat-sub">3+ net fault reports</span>
+                </div>
+                <div class="stat-card orange">
+                    <span class="stat-title">OPEN</span>
+                    <span class="stat-value" id="ops-count-open">0</span>
+                    <span class="stat-sub">Awaiting triage</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-title">ACKNOWLEDGED</span>
+                    <span class="stat-value" id="ops-count-ack">0</span>
+                    <span class="stat-sub">Being worked</span>
+                </div>
+                <div class="stat-card green">
+                    <span class="stat-title">RESOLVED</span>
+                    <span class="stat-value" id="ops-count-resolved">0</span>
+                    <span class="stat-sub">Confirmed back online</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-title">TOTAL REPORTS</span>
+                    <span class="stat-value" id="ops-count-reports">0</span>
+                    <span class="stat-sub">All driver submissions</span>
+                </div>
+            </div>
+
+            <div class="ops-filter-row">
+                <label>Show:</label>
+                <button class="btn-filter-admin active" data-ops-filter="all" onclick="setOpsFilter('all')">ALL</button>
+                <button class="btn-filter-admin" data-ops-filter="open" onclick="setOpsFilter('open')">OPEN</button>
+                <button class="btn-filter-admin" data-ops-filter="acknowledged" onclick="setOpsFilter('acknowledged')">ACKNOWLEDGED</button>
+                <button class="btn-filter-admin" data-ops-filter="resolved" onclick="setOpsFilter('resolved')">RESOLVED</button>
+                <button class="btn-export-csv" onclick="exportOpsQueueCsv()">
+                    <span class="material-symbols-outlined">download</span> Export CSV
+                </button>
+            </div>
+
+            <div class="ops-queue-list" id="ops-queue-list">
+                <p class="no-data">Loading operations queue…</p>
             </div>
         </section>
 
@@ -774,12 +882,23 @@
         <section id="admin-panel-stations" class="admin-tab-panel">
             <div class="station-management-header">
                 <div class="search-sort-box">
-                    <input type="text" id="admin-station-search" placeholder="Search station by name, operator, address..." oninput="renderAdminStationsTable()">
-                    <select id="admin-station-sort" onchange="renderAdminStationsTable()">
+                    <input type="text" id="admin-station-search" placeholder="Search station by name, operator, address..." oninput="resetStationPageAndRender()">
+                    <select id="admin-station-sort" onchange="resetStationPageAndRender()">
                         <option value="name">Sort by Station Name</option>
                         <option value="operator">Sort by Operator</option>
                         <option value="chargers">Sort by Total Chargers</option>
+                        <option value="faulted">Sort by Faulted First</option>
                     </select>
+                    <select id="admin-station-status" onchange="resetStationPageAndRender()">
+                        <option value="all">All statuses</option>
+                        <option value="operational">Operational only</option>
+                        <option value="faulty">Faulty / reported</option>
+                        <option value="offline">Offline / unavailable</option>
+                        <option value="edited">Admin-edited</option>
+                    </select>
+                    <button class="btn-export-csv" onclick="exportStationsCsv()">
+                        <span class="material-symbols-outlined">download</span> Export CSV
+                    </button>
                 </div>
             </div>
 
@@ -802,6 +921,14 @@
                     </tbody>
                 </table>
             </div>
+
+            <!-- The OCM feed returns ~2000 stations; rendering them all at once
+                 froze this tab, so the table is paginated. -->
+            <div class="table-pagination" id="admin-stations-pagination">
+                <button class="btn-page" onclick="changeStationPage(-1)">Previous</button>
+                <span class="page-indicator" id="admin-stations-page-label">--</span>
+                <button class="btn-page" onclick="changeStationPage(1)">Next</button>
+            </div>
         </section>
 
         <!-- ADMIN TAB: ANALYTICS -->
@@ -817,6 +944,61 @@
                     <h3>Connector Availability Share</h3>
                     <div class="chart-container-large">
                         <canvas id="availabilityChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Behavioural cuts derived from logged analytics events, i.e. what
+                 drivers actually did, as opposed to the live station snapshot above. -->
+            <div class="analytics-charts-grid">
+                <div class="widget-card">
+                    <div class="widget-header-row">
+                        <h3>Diversions by Hour of Day</h3>
+                        <span class="widget-hint">When GridSync sends drivers to chargers</span>
+                    </div>
+                    <div class="chart-container-large">
+                        <canvas id="hourHistogramChart"></canvas>
+                    </div>
+                </div>
+                <div class="widget-card">
+                    <div class="widget-header-row">
+                        <h3>Platform Activity — Last 30 Days</h3>
+                        <span class="widget-hint">Sessions · routes planned · diversions</span>
+                    </div>
+                    <div class="chart-container-large">
+                        <canvas id="activityChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="dashboard-widgets-row">
+                <div class="widget-card half">
+                    <h3>Diverted Connector Mix</h3>
+                    <div class="chart-container" style="height: 240px;">
+                        <canvas id="connectorMixChart"></canvas>
+                    </div>
+                </div>
+                <div class="widget-card half">
+                    <div class="widget-header-row">
+                        <h3>Admin Audit Trail</h3>
+                        <button class="btn-export-csv" onclick="exportAuditCsv()">
+                            <span class="material-symbols-outlined">download</span> Export CSV
+                        </button>
+                    </div>
+                    <div class="table-container audit-scroll">
+                        <table class="admin-table">
+                            <thead>
+                                <tr>
+                                    <th>When</th>
+                                    <th>Operator</th>
+                                    <th>Action</th>
+                                    <th>Target</th>
+                                </tr>
+                            </thead>
+                            <tbody id="admin-audit-body">
+                                <tr><td colspan="4" class="no-data">No admin actions recorded yet.</td></tr>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>

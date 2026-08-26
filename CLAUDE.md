@@ -47,7 +47,28 @@ Persistence is Supabase (Postgres via PostgREST) when `SUPABASE_URL`/`SUPABASE_K
 **4. Impact / sustainability analytics** — `logAnalyticsEvent(type, stationId, metadata)` fires `session_start` (login), `route_planned` (`planTrip` success), and `charger_diverted` (`addChargerStopover` / `selectStationAsDestination`'s direct-route branch, via `logChargerDiversion`) to `POST /api/analytics/event` → `analytics_events` table (Supabase) or file-backed fallback. `GET /api/analytics/summary` (admin, fleet-wide) and `GET /api/analytics/me?email=` (driver, personal) both derive estimated kWh/CO2-avoided/₹-to-operators from `charger_diverted` events using constants documented at the top of `api/handler.js` (`AC_SESSION_KWH_ESTIMATE`, `DC_SESSION_KWH_ESTIMATE`, `FLEET_KM_PER_KWH`, `PETROL_G_CO2_PER_KM`, `GRID_KG_CO2_PER_KWH`) — these are estimates, not metered readings, and both response payloads say so (`dataSource: "SUPABASE" | "SESSION_ONLY"`).
 
 ## Server endpoints (`api/handler.js`)
-Config `/api/config` · Grid `/api/grid-demand` · Chargers `/api/ocm-chargers` · Trips `/api/save-trip` `/api/get-saved-trips` · Auth `/api/auth/login` `/api/auth/register` · EPA `/api/epa/makes` `/api/epa/models` `/api/epa/specs` (unused by current UI — dead but functional) · Vehicles `/api/ev-makes` `/api/ev-vehicles[?make=]` `/api/vahan/vehicle` `/api/user/vehicle` · Reports `/api/reports/add` `/api/reports/summary` · Admin `/api/admin/station/update` `/api/admin/charger/update` `/api/admin/overrides` · Impact `/api/analytics/event` `/api/analytics/summary` `/api/analytics/me` · AI `/api/predict_arrival`
+Public `/api/config` `/api/health` `/api/grid-demand` `/api/ocm-chargers` `/api/auth/login` `/api/auth/register` `/api/predict_arrival` `/api/ev-makes` `/api/ev-vehicles[?make=]` `/api/vahan/vehicle` `/api/reports/summary` `/api/analytics/event` · EPA `/api/epa/makes` `/api/epa/models` `/api/epa/specs` (unused by current UI — dead but functional)
+
+**Auth-required** (`requireAuth`): `/api/save-trip` `/api/get-saved-trips` `/api/user/vehicle` `/api/reports/add` `/api/analytics/me` `/api/admin/overrides`
+**Admin-only** (`requireAdmin`): `/api/admin/station/update` `/api/admin/charger/update` `/api/admin/ops-queue` `/api/admin/reports/resolve` `/api/admin/audit` `/api/admin/analytics` `/api/analytics/summary`
+
+## Auth model (added after the endpoints above were originally written)
+- Login/register return an **HMAC-SHA256 signed session token** (`lib/auth.js` `signToken`/`verifyToken`, compact `<base64url payload>.<base64url sig>`, 12h TTL). Signed with `SESSION_SECRET`; without that env var the server generates a random per-process secret, so sessions die on every cold start (deliberate — never fall back to a constant).
+- The client keeps the token in `localStorage` under `gridsync.session` and sends it via **`apiFetch()` in `script.js`** — every `/api/*` call goes through that one wrapper, which attaches the bearer header and, on a 401, clears the session and returns the user to login. Don't call bare `fetch()` for an API route.
+- **Identity is always read from the token, never the request body.** `/api/user/vehicle`, `/api/analytics/me`, `/api/reports/add` and `/api/save-trip` all ignore any client-supplied email and use `auth.email`. Before this, any signed-in driver could overwrite another's vehicle profile or read their impact stats by changing a parameter.
+- Failed logins are throttled (8 per email per 10 min → 429), and unknown-user vs wrong-password return an identical message so accounts can't be enumerated.
+- Every admin mutation writes an **audit entry** (`recordAudit`) surfaced in the Analytics tab.
+
+## Admin console (Overview · Ops Queue · Live Control Map · Manage Stations · Analytics)
+- **Ops Queue** is the working surface: `buildOpsQueue` groups community reports per station, scores severity from `broken - working` (CRITICAL ≥3 / HIGH 2 / MEDIUM 1), and carries triage state `open → acknowledged → resolved`. A station reported broken *after* its resolution timestamp **auto-reopens** — resolutions don't silently bury a recurring fault.
+- Overview's "Needs Attention" widget and the nav badge are painted from that same queue; the old flat read-only report table is gone.
+- `refreshAdminData()` re-pulls everything on a 60s timer (paused while the tab is hidden) and on the manual refresh button; `markAdminSynced()` drives the header's synced-at indicator.
+- Manage Stations is **paginated at 50 rows** — the OCM feed is ~1950 stations and rendering them all froze the tab. Status filtering uses the OCM `status` field, *not* `availableCount` (live connector counts only exist for stations Google Places has been queried for, so an availability filter matched nothing fleet-wide).
+- Ops queue, audit trail and the stations table all export CSV via `downloadCsv()`.
+- **`escapeHtml()` is mandatory** for any station/operator/user text interpolated into admin `innerHTML` — those strings come from OCM and from admin edits, i.e. outside this app.
+
+## PWA
+`manifest.webmanifest` + `sw.js` + `offline.html`, icons generated into `icons/`. The service worker caches the **app shell only and never `/api/*`** — a stale cached charger status would send a driver to an occupied or broken station. Navigations are network-first, static assets cache-first.
 
 ## Conventions to preserve
 - **Graceful degradation everywhere.** Every external/DB call has a simulated or local fallback and returns 200 — the UI never sees a 5xx. `/api/grid-demand` fakes 19–25 GW; every Supabase-backed endpoint falls back to the file-backed store on any Supabase error or when `SUPABASE_URL`/`SUPABASE_KEY` aren't set; EPA falls back to `LOCAL_EPA_FALLBACK`.
@@ -59,6 +80,11 @@ Config `/api/config` · Grid `/api/grid-demand` · Chargers `/api/ocm-chargers` 
 - **Car selection is make-first.** `ev_models.json` entries carry `{make, model, modelFull}` — `model` is the short display name (cascade dropdown), `modelFull` is `"{make} {model}"` and is what gets stored server-side as `user.vehicleModel` (keeps existing display/VAHAN-matching code working unchanged). `populateModelOptions(make)` filters the already-fully-fetched `cachedEvModels` client-side rather than a second network round-trip per company change.
 
 ## Resolved (kept here so a regression is recognizable)
+- The admin shell never called `initMap()`, and `allStations` is only populated by `loadInitialData()` inside it — so the entire admin console (every station KPI, Manage Stations, the Live Control Map, both station charts) rendered zeroes and an empty map for operators. `enterAppAsUser()` now initialises the map for admins too, and skips `startGeolocationTracking()` for them.
+- `/api/admin/*` had **no authentication at all** — anyone who knew the URL could rewrite station metadata on the live deployment — and "Admin" was purely a client-side flag the browser set on itself.
+- The login form's `catch` used to accept the demo credentials client-side when the API was unreachable, handing out an Admin shell with no server-issued token (a client-side auth bypass). Authentication is now always the server's decision.
+- The "Sign in with Google" button showed a fake "Verifying with Google Accounts / Exchanging OAuth 2.0 credentials" overlay while actually signing into the built-in demo account. No Google OAuth exists in this app; it is now labelled "Quick sign-in as demo driver".
+- A GPS fix arriving before the dynamically-injected Maps script finished loading threw `Cannot read properties of undefined (reading 'travelMode')`; the geolocation ETA path now checks `isMapsApiReady()` alongside `directionsService`.
 - `index.html` used to call `toggleSimulationDrive()`, which was never defined — only `toggleSimulator()` existed. Fixed by correcting the `onclick` target.
 - `package.json` used to declare `"dev": "vercel dev"`, which trips Vercel CLI's self-recursion guard regardless of invocation path and blocked all local dev. Removed; run `vercel dev` directly.
 - `/api/predict_arrival` is not a model — it is an if/else on arrival hour. `StationRecommendationMLP`'s weights are hardcoded constants; "prediction" is a fixed scoring function. Both intentional simplifications for this app's scope, not bugs — noted here so they aren't mistaken for missing functionality.

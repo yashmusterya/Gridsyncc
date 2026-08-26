@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GridSync — Offline</title>
+    <link rel="icon" href="/favicon.png" type="image/png">
+    <style>
+        :root { color-scheme: dark; }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            background: #0f172a;
+            color: #e2e8f0;
+            font-family: Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
+            text-align: center;
+        }
+        .card {
+            max-width: 420px;
+        }
+        .mark {
+            width: 72px;
+            height: 72px;
+            border-radius: 50%;
+            background: #10b981;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 22px;
+        }
+        h1 { font-size: 1.4rem; margin: 0 0 10px; color: #f1f5f9; }
+        p { color: #94a3b8; line-height: 1.6; font-size: 0.92rem; margin: 0 0 22px; }
+        button {
+            background: #10b981;
+            color: #052e21;
+            border: none;
+            border-radius: 9px;
+            padding: 12px 26px;
+            font-size: 0.9rem;
+            font-weight: 700;
+            cursor: pointer;
+            min-height: 46px;
+        }
+        button:hover { filter: brightness(1.08); }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div class="mark">
+            <svg viewBox="0 0 24 24" width="38" height="38" fill="#ffffff" aria-hidden="true">
+                <path d="M11 6L6.5 13h4.5v5l4.5-7h-4.5z"/>
+            </svg>
+        </div>
+        <h1>You're offline</h1>
+        <p>
+            GridSync needs a connection to show live charger availability, grid load
+            and pricing. Cached data isn't shown here on purpose — a stale charger
+            status could send you to a station that's already occupied or out of service.
+        </p>
+        <button onclick="location.reload()">Try again</button>
+    </div>
+</body>
+</html>

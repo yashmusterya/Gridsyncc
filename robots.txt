@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /$
+Allow: /index.html
+Allow: /manifest.webmanifest
+Allow: /icons/
+
+# The app itself is behind a login and the API is session-authenticated;
+# there is nothing crawlable past the landing page.
+Disallow: /api/

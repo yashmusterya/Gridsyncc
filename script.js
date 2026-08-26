@@ -40,7 +40,80 @@ let pricingChartInstance = null;
 let adminUtilChart = null;
 let adminAvailChart = null;
 let adminImpactTrendChart = null;
+let adminHourChart = null;
+let adminActivityChart = null;
+let adminConnectorChart = null;
 let activeLoginRole = 'User';
+
+// ==========================================
+// AUTHENTICATED API TRANSPORT
+// ==========================================
+
+// Session token issued by /api/auth/login. Every /api/* call goes out through
+// apiFetch() below so the bearer header is attached in exactly one place -
+// the server now rejects unauthenticated admin and user-scoped requests.
+let authToken = null;
+const AUTH_STORAGE_KEY = 'gridsync.session';
+
+function persistSession(token, user) {
+    authToken = token || null;
+    try {
+        if (token && user) {
+            localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify({ token, user }));
+        } else {
+            localStorage.removeItem(AUTH_STORAGE_KEY);
+        }
+    } catch (e) {
+        // Private browsing / blocked storage: the session still works for this
+        // tab, it just won't survive a reload.
+    }
+}
+
+function restoreSession() {
+    try {
+        const raw = localStorage.getItem(AUTH_STORAGE_KEY);
+        if (!raw) return null;
+        const parsed = JSON.parse(raw);
+        if (!parsed || !parsed.token || !parsed.user) return null;
+        authToken = parsed.token;
+        return parsed.user;
+    } catch (e) {
+        return null;
+    }
+}
+
+/**
+ * fetch() wrapper that attaches the bearer token and centralises 401 handling.
+ * A 401 means the token expired or the server restarted with a new signing
+ * secret, so the only correct response is to drop the session and return the
+ * user to the login screen rather than leaving a half-dead UI on screen.
+ */
+function apiFetch(path, options = {}) {
+    const opts = { ...options, headers: { ...(options.headers || {}) } };
+    if (authToken) opts.headers['Authorization'] = `Bearer ${authToken}`;
+
+    return window.fetch(path, opts).then(response => {
+        if (response.status === 401 && authToken) {
+            handleSessionExpired();
+        }
+        return response;
+    });
+}
+
+let sessionExpiryHandled = false;
+function handleSessionExpired() {
+    if (sessionExpiryHandled) return; // one redirect, not one per in-flight call
+    sessionExpiryHandled = true;
+    persistSession(null, null);
+    activeUser = null;
+    try {
+        showToastNotification('Your session expired — please sign in again.');
+        document.getElementById('user-app-shell').classList.add('hidden');
+        document.getElementById('admin-app-shell').classList.add('hidden');
+        document.getElementById('login-screen').classList.remove('hidden');
+    } catch (e) { /* DOM may not be ready */ }
+    setTimeout(() => { sessionExpiryHandled = false; }, 3000);
+}
 
 /**
  * Fire-and-forget impact/analytics event logger. Never blocks or throws into
@@ -49,7 +122,7 @@ let activeLoginRole = 'User';
  */
 function logAnalyticsEvent(type, stationId, metadata) {
     try {
-        fetch('/api/analytics/event', {
+        apiFetch('/api/analytics/event', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -303,14 +376,14 @@ function getOCMAddress(ocm) {
 async function syncDatabaseState() {
     try {
         // Fetch Admin Overrides
-        const overridesRes = await fetch('/api/admin/overrides');
+        const overridesRes = await apiFetch('/api/admin/overrides');
         if (overridesRes.ok) {
             adminOverrides = await overridesRes.json();
             console.log('Loaded admin overrides:', adminOverrides);
         }
 
         // Fetch User Reports
-        const reportsRes = await fetch('/api/reports/summary');
+        const reportsRes = await apiFetch('/api/reports/summary');
         if (reportsRes.ok) {
             communityReports = await reportsRes.json();
             console.log('Loaded community reports summary:', communityReports);
@@ -644,7 +717,7 @@ window.submitChargerReport = async function(stationId, isWorking) {
     
     showStatus('Submitting status report...');
     try {
-        const response = await fetch('/api/reports/add', {
+        const response = await apiFetch('/api/reports/add', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -658,7 +731,7 @@ window.submitChargerReport = async function(stationId, isWorking) {
             showToastNotification(isWorking ? '🟢 Reported Working' : '🔴 Reported Faulty');
             
             // Re-sync reports summary from backend immediately
-            const repSummary = await fetch('/api/reports/summary');
+            const repSummary = await apiFetch('/api/reports/summary');
             if (repSummary.ok) {
                 communityReports = await repSummary.json();
             }
@@ -1007,7 +1080,7 @@ function plotMarkers(stations) {
  */
 async function fetchIndiaEnergyAtlasGridData() {
     try {
-        const response = await fetch('/api/grid-demand');
+        const response = await apiFetch('/api/grid-demand');
         if (!response.ok) throw new Error(`HTTP error ${response.status}`);
         liveGridDemand = await response.json();
         console.log('Fetched India Energy Atlas Grid Data:', liveGridDemand);
@@ -1404,9 +1477,10 @@ async function loadInitialData() {
  * Google Maps Setup and Autocomplete
  */
 function initMap(retriesLeft = 20) {
-    if (typeof google === 'undefined' || !google.maps) {
-        // The Maps script now loads asynchronously (key fetched from /api/config),
-        // so it may not be ready the instant initMap() is first called - retry briefly.
+    if (!isMapsApiReady()) {
+        // The Maps script loads asynchronously (key fetched from /api/config), so
+        // neither the namespace nor its sub-APIs are ready the instant initMap()
+        // is first called - retry briefly.
         if (retriesLeft > 0) {
             setTimeout(() => initMap(retriesLeft - 1), 250);
             return;
@@ -1669,7 +1743,13 @@ function initMap(retriesLeft = 20) {
 
     // Auto load baseline data
     loadInitialData().then(() => {
-        startGeolocationTracking();
+        // An admin console has no driver to follow, and asking for GPS there
+        // just throws a permission prompt at an operator who doesn't need it.
+        if (activeUser && activeUser.role === 'Admin') {
+            refreshAdminData(false);
+        } else {
+            startGeolocationTracking();
+        }
     });
 }
 
@@ -1697,7 +1777,10 @@ function startGeolocationTracking() {
             // ==========================================
             // AI DYNAMIC ETA PREDICTION LOGIC
             // ==========================================
-            if (destinationMarker && directionsService) {
+            // isMapsApiReady() as well as directionsService: a GPS fix can land
+            // while the dynamically-injected Maps script is still initialising,
+            // and google.maps.TravelMode is undefined during that window.
+            if (destinationMarker && directionsService && isMapsApiReady()) {
                 const request = {
                     origin: userLocation,
                     destination: destinationMarker.getPosition(),
@@ -1712,7 +1795,7 @@ function startGeolocationTracking() {
                         
                         try {
                             // Call our AI prediction service with the new real-time ETA
-                            const mlResponse = await fetch('/api/predict_arrival', {
+                            const mlResponse = await apiFetch('/api/predict_arrival', {
                                 method: 'POST',
                                 headers: { 'Content-Type': 'application/json' },
                                 body: JSON.stringify({ 
@@ -1808,7 +1891,15 @@ function clearDirectionsRoute() {
  */
 window.syncSearchDestination = function(val) {
     if (!val || val.trim() === '') return;
-    
+
+    // Same async-load race as planTrip: google.maps.places populates after the
+    // dynamically-injected Maps script finishes loading.
+    if (!isMapsApiReady() || !google.maps.places || !map) {
+        showStatus('Map is still loading — please try again in a moment.', true);
+        setTimeout(hideStatus, 2500);
+        return;
+    }
+
     // Attempt Google Places search first (highly reliable on viewport/place queries)
     const request = {
         query: val,
@@ -2154,10 +2245,17 @@ window.switchAdminTab = function(tabName) {
 
     if (tabName === 'dash') {
         loadAdminDashboard();
+        loadOpsQueue();
+        startAdminAutoRefresh();
+    } else if (tabName === 'ops') {
+        loadOpsQueue();
+        startAdminAutoRefresh();
     } else if (tabName === 'stations') {
         renderAdminStationsTable();
     } else if (tabName === 'analytics') {
         renderAdminCharts();
+        loadAdminAnalyticsCharts();
+        loadAdminAudit();
     }
 };
 
@@ -2266,7 +2364,9 @@ function renderProfileDetails() {
  */
 function loadMyImpact() {
     if (!activeUser || !activeUser.email) return;
-    fetch(`/api/analytics/me?email=${encodeURIComponent(activeUser.email)}`)
+    // No email parameter: the server reads the caller's identity from the
+    // session token so one driver can't request another's impact numbers.
+    apiFetch('/api/analytics/me')
         .then(res => res.json())
         .then(data => {
             const setText = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
@@ -2288,7 +2388,7 @@ window.handleAuthLogin = async function(e) {
 
     showStatus('Authenticating...');
     try {
-        const response = await fetch('/api/auth/login', {
+        const response = await apiFetch('/api/auth/login', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email, password })
@@ -2296,56 +2396,70 @@ window.handleAuthLogin = async function(e) {
 
         if (response.ok) {
             const data = await response.json();
-            activeUser = data.user;
-            
-            // Hide login screen
-            document.getElementById('login-screen').classList.add('hidden');
-            
-            if (activeUser.role === 'Admin') {
-                document.getElementById('admin-app-shell').classList.remove('hidden');
-                document.getElementById('user-app-shell').classList.add('hidden');
-                switchAdminTab('dash');
-            } else {
-                document.getElementById('user-app-shell').classList.remove('hidden');
-                document.getElementById('admin-app-shell').classList.add('hidden');
-                switchUserTab('home');
-                initMap();
-                // Only prompt EV Profile setup if it isn't already configured -
-                // returning drivers with a saved profile shouldn't see this every login.
-                checkUserVehicleProfile();
-            }
-            logAnalyticsEvent('session_start', null, { role: activeUser.role });
-            showToastNotification(`Welcome back, ${activeUser.name}!`);
+            persistSession(data.token, data.user);
+            enterAppAsUser(data.user);
         } else {
-            const err = await response.json();
-            alert(err.error || 'Login failed. Please check credentials.');
+            const err = await response.json().catch(() => ({}));
+            showLoginError(err.error || 'Login failed. Please check your credentials.');
         }
     } catch (err) {
-        console.warn('Auth request failed, using in-memory local fallback database.');
-        showToastNotification('Running in offline local fallback mode');
-        
-        // Simple client-side fallback logic if backend server not running
-        if ((email === 'user@gridsync.in' && password === 'user123') || email === 'user' || !email || email === 'guest') {
-            activeUser = { email: 'user@gridsync.in', role: 'User', name: 'GridSync Driver', savedStations: [], chargingHistory: [] };
-            document.getElementById('login-screen').classList.add('hidden');
-            document.getElementById('user-app-shell').classList.remove('hidden');
-            switchUserTab('home');
-            initMap();
-            checkUserVehicleProfile();
-            logAnalyticsEvent('session_start', null, { role: 'User' });
-        } else if ((email === 'admin@gridsync.in' && password === 'admin123') || email === 'admin') {
-            activeUser = { email: 'admin@gridsync.in', role: 'Admin', name: 'GridSync Operator' };
-            document.getElementById('login-screen').classList.add('hidden');
-            document.getElementById('admin-app-shell').classList.remove('hidden');
-            switchAdminTab('dash');
-            logAnalyticsEvent('session_start', null, { role: 'Admin' });
-        } else {
-            alert('Invalid local fallback credentials.');
-        }
+        // Previously this fell back to accepting the demo credentials purely
+        // client-side, which handed out an Admin shell with no server-issued
+        // token - a client-side auth bypass. Authentication is now always the
+        // server's decision; a network failure is reported as a network failure.
+        console.error('Auth request failed:', err);
+        showLoginError('Could not reach the GridSync server. Check your connection and try again.');
     } finally {
         hideStatus();
     }
 };
+
+/**
+ * Reveals the correct shell for a freshly-authenticated user. Shared by the
+ * login form, the Google sign-in path, and session restore on page load.
+ */
+function enterAppAsUser(user) {
+    activeUser = user;
+    document.getElementById('login-screen').classList.add('hidden');
+
+    if (user.role === 'Admin') {
+        document.getElementById('admin-app-shell').classList.remove('hidden');
+        document.getElementById('user-app-shell').classList.add('hidden');
+        const nameEl = document.getElementById('admin-user-name');
+        if (nameEl) nameEl.textContent = user.name || 'GridSync Controller';
+        // The admin console reads every station KPI, the Manage Stations table
+        // and the Live Control Map out of `allStations` - which only
+        // initMap()/loadInitialData() populates. Without this the whole console
+        // rendered zeroes and an empty map for an operator.
+        initMap();
+        switchAdminTab('dash');
+    } else {
+        document.getElementById('user-app-shell').classList.remove('hidden');
+        document.getElementById('admin-app-shell').classList.add('hidden');
+        switchUserTab('home');
+        initMap();
+        // Only prompt EV Profile setup if it isn't already configured -
+        // returning drivers with a saved profile shouldn't see this every login.
+        checkUserVehicleProfile();
+    }
+    logAnalyticsEvent('session_start', null, { role: user.role });
+    showToastNotification(`Welcome back, ${user.name}!`);
+}
+
+/**
+ * Inline login error, replacing the blocking alert() the form used to throw.
+ */
+function showLoginError(message) {
+    const box = document.getElementById('login-error');
+    if (!box) {
+        alert(message);
+        return;
+    }
+    box.textContent = message;
+    box.classList.remove('hidden');
+    clearTimeout(showLoginError._timer);
+    showLoginError._timer = setTimeout(() => box.classList.add('hidden'), 6000);
+}
 
 /**
  * Handle authentication registration
@@ -2359,43 +2473,48 @@ window.handleAuthRegister = async function(e) {
 
     showStatus('Creating account...');
     try {
-        const response = await fetch('/api/auth/register', {
+        const response = await apiFetch('/api/auth/register', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ name, email, phone, password })
         });
 
         if (response.ok) {
-            alert('Account created successfully! Please login with your credentials.');
+            // Registration returns a session token, so sign the new driver
+            // straight in rather than bouncing them back to the login form.
+            const data = await response.json();
             hideRegisterModal();
+            persistSession(data.token, data.user);
+            enterAppAsUser(data.user);
         } else {
-            const err = await response.json();
+            const err = await response.json().catch(() => ({}));
             alert(err.error || 'Registration failed.');
         }
     } catch (err) {
         console.error('Registration failed:', err);
-        alert('Local mock registration complete (Server offline). You can login now.');
-        hideRegisterModal();
+        alert('Could not reach the GridSync server. Check your connection and try again.');
     } finally {
         hideStatus();
     }
 };
 
 window.handleAuthLogout = function() {
+    persistSession(null, null);
     activeUser = null;
     activeWaypoint = null;
     routePolylinePath = [];
     onRouteChargers = [];
+    stopAdminAutoRefresh();
     clearDirectionsRoute();
-    
+
     document.getElementById('user-app-shell').classList.add('hidden');
     document.getElementById('admin-app-shell').classList.add('hidden');
     document.getElementById('login-screen').classList.remove('hidden');
-    
+
     // Reset login inputs
     document.getElementById('login-email').value = '';
     document.getElementById('login-password').value = '';
-    
+
     showToastNotification('Logged out successfully.');
 };
 
@@ -2446,10 +2565,30 @@ function filterOnRouteChargers(routesPath) {
 }
 
 /**
+ * True once the Maps sub-APIs this app actually calls are populated, not just
+ * the `google.maps` namespace itself. The Maps script is injected dynamically
+ * after fetching its key from /api/config, so `google.maps` can exist while
+ * TravelMode/DirectionsService are still undefined - checking only the
+ * namespace threw "Cannot read properties of undefined (reading 'travelMode')"
+ * when a route was requested during that window.
+ */
+function isMapsApiReady() {
+    return typeof google !== 'undefined'
+        && !!google.maps
+        && !!google.maps.TravelMode
+        && !!google.maps.DirectionsService
+        && !!google.maps.geometry;
+}
+
+/**
  * Directions route planner with optional Waypoints stopovers
  */
 async function planTrip(customEndLocation, customTitle) {
-    if (!google || !google.maps) return;
+    if (!isMapsApiReady() || !directionsService) {
+        showStatus('Map is still loading — please try again in a moment.', true);
+        setTimeout(hideStatus, 2500);
+        return;
+    }
 
     const startInput = document.getElementById('input-start');
     const startVal = startInput ? startInput.value.trim() : '';
@@ -3154,6 +3293,16 @@ function loadAdminDashboard() {
     document.getElementById('stat-busy-chargers').textContent = totalBusy;
     document.getElementById('stat-faulty-chargers').textContent = totalFaulty;
 
+    // Network health: share of connectors that are neither faulted nor offline.
+    const healthEl = document.getElementById('stat-network-health');
+    if (healthEl) {
+        const healthy = Math.max(0, totalConn - totalFaulty - totalOffline);
+        const pct = totalConn > 0 ? Math.round((healthy / totalConn) * 100) : 0;
+        healthEl.textContent = `${pct}%`;
+        healthEl.parentElement.classList.toggle('red', pct < 80);
+        healthEl.parentElement.classList.toggle('green', pct >= 95);
+    }
+
     // Render Peak grid demands in admin widgets
     const demandNum = document.getElementById('admin-demand-num');
     const demandTime = document.getElementById('admin-demand-time');
@@ -3188,33 +3337,13 @@ function loadAdminDashboard() {
         }
     }
 
-    // Load recent reports table
-    const tableBody = document.getElementById('admin-recent-reports');
-    tableBody.innerHTML = '';
-    
-    // Fetch reports list dynamically
-    fetch('/api/reports/summary').then(res => res.json()).then(data => {
-        let count = 0;
-        for (const stationId in data) {
-            const station = allStations.find(s => s.id === stationId);
-            if (station && count < 5) {
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td><strong>${station.title}</strong></td>
-                    <td><span class="admin-map-pin-badge" style="background:#ef4444; color:white;">FAULTY (${data[stationId].broken} votes)</span></td>
-                    <td>Just Now</td>
-                    <td>Community Report</td>
-                `;
-                tableBody.appendChild(tr);
-                count++;
-            }
-        }
-        if (count === 0) {
-            tableBody.innerHTML = '<tr><td colspan="4" class="no-data">No community reports submitted.</td></tr>';
-        }
-    });
+    // "Needs Attention" is painted from the severity-scored ops queue
+    // (renderNeedsAttention), which loadOpsQueue() refreshes - it replaced the
+    // flat read-only report dump that used to live here.
+    renderNeedsAttention();
 
     loadImpactDashboard();
+    markAdminSynced();
 }
 
 /**
@@ -3224,7 +3353,7 @@ function loadAdminDashboard() {
  * top diverted-to stations.
  */
 function loadImpactDashboard() {
-    fetch('/api/analytics/summary').then(res => res.json()).then(data => {
+    apiFetch('/api/analytics/summary').then(res => res.json()).then(data => {
         const sourceBadge = document.getElementById('impact-data-source');
         if (sourceBadge) {
             const isPersistent = data.dataSource === 'SUPABASE';
@@ -3319,55 +3448,124 @@ window.filterAdminMapPins = function(statusCategory) {
 /**
  * Render Admin Station Management Table
  */
-window.renderAdminStationsTable = function() {
-    const listBody = document.getElementById('admin-stations-list-body');
-    const searchVal = document.getElementById('admin-station-search').value.toLowerCase();
-    const sortVal = document.getElementById('admin-station-sort').value;
+const ADMIN_STATIONS_PAGE_SIZE = 50;
+let adminStationPage = 0;
 
-    if (!listBody) return;
+/**
+ * Applies the Manage Stations search / status filter / sort controls and
+ * returns the matching stations. Shared by the table renderer and the CSV
+ * export so both always reflect exactly what the operator is looking at.
+ */
+function getFilteredAdminStations() {
+    const searchEl = document.getElementById('admin-station-search');
+    const sortEl = document.getElementById('admin-station-sort');
+    const statusEl = document.getElementById('admin-station-status');
 
-    listBody.innerHTML = '';
-    
-    // Filter stations
+    const searchVal = (searchEl ? searchEl.value : '').toLowerCase();
+    const sortVal = sortEl ? sortEl.value : 'name';
+    const statusVal = statusEl ? statusEl.value : 'all';
+
     let filtered = allStations.filter(s => {
-        return s.title.toLowerCase().includes(searchVal) ||
-               s.operator.toLowerCase().includes(searchVal) ||
-               s.address.toLowerCase().includes(searchVal);
+        const matchesSearch = !searchVal
+            || s.title.toLowerCase().includes(searchVal)
+            || s.operator.toLowerCase().includes(searchVal)
+            || s.address.toLowerCase().includes(searchVal);
+        if (!matchesSearch) return false;
+
+        if (statusVal === 'all') return true;
+        const statusLower = (s.status || '').toLowerCase();
+        if (statusVal === 'faulty') return !!s.communityFault || statusLower.includes('faulty');
+        if (statusVal === 'offline') {
+            return statusLower.includes('offline') || statusLower.includes('maintenance')
+                || statusLower.includes('not operational') || statusLower.includes('temporarily unavailable');
+        }
+        if (statusVal === 'edited') return !!s.adminUpdated;
+        if (statusVal === 'operational') {
+            // Filter on the OCM status field, not availableCount: live connector
+            // counts only exist for stations Google Places has been queried for
+            // (the current viewport), so availableCount is 0 across the whole
+            // static feed and an availability-based filter matched nothing.
+            return statusLower.includes('operational')
+                && !statusLower.includes('not operational')
+                && !s.communityFault;
+        }
+        return true;
     });
 
-    // Sort stations
     filtered.sort((a, b) => {
         if (sortVal === 'name') return a.title.localeCompare(b.title);
         if (sortVal === 'operator') return a.operator.localeCompare(b.operator);
         if (sortVal === 'chargers') return b.totalConnectors - a.totalConnectors;
+        if (sortVal === 'faulted') {
+            const score = s => (s.communityFault ? 2 : 0) + ((s.status || '').toLowerCase().includes('offline') ? 1 : 0);
+            return score(b) - score(a);
+        }
         return 0;
     });
 
+    return filtered;
+}
+
+window.resetStationPageAndRender = function() {
+    adminStationPage = 0;
+    renderAdminStationsTable();
+};
+
+window.changeStationPage = function(delta) {
+    const total = getFilteredAdminStations().length;
+    const maxPage = Math.max(0, Math.ceil(total / ADMIN_STATIONS_PAGE_SIZE) - 1);
+    adminStationPage = Math.min(maxPage, Math.max(0, adminStationPage + delta));
+    renderAdminStationsTable();
+};
+
+/**
+ * Render Admin Station Management Table (paginated).
+ */
+window.renderAdminStationsTable = function() {
+    const listBody = document.getElementById('admin-stations-list-body');
+    if (!listBody) return;
+
+    const filtered = getFilteredAdminStations();
+    const pageLabel = document.getElementById('admin-stations-page-label');
+
     if (filtered.length === 0) {
         listBody.innerHTML = '<tr><td colspan="8" class="no-data">No matching stations found.</td></tr>';
+        if (pageLabel) pageLabel.textContent = 'No results';
         return;
     }
 
-    filtered.forEach(s => {
+    const maxPage = Math.max(0, Math.ceil(filtered.length / ADMIN_STATIONS_PAGE_SIZE) - 1);
+    if (adminStationPage > maxPage) adminStationPage = maxPage;
+
+    const start = adminStationPage * ADMIN_STATIONS_PAGE_SIZE;
+    const pageRows = filtered.slice(start, start + ADMIN_STATIONS_PAGE_SIZE);
+
+    listBody.innerHTML = pageRows.map(s => {
         const isRecommended = recommendedStation && (recommendedStation.id === s.id);
         const statusLabel = s.communityFault ? '⚠ Faulty (Community)' : s.status;
         const sourceLabel = s.adminUpdated ? 'ADMIN UPDATED' : (s.liveStatus ? 'LIVE' : 'STATIC');
-        
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-            <td><strong>${s.title}</strong> ${isRecommended ? '<span style="color:#facc15">★</span>' : ''}</td>
-            <td>${s.operator}</td>
-            <td style="font-size: 0.7rem; max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${s.address}</td>
-            <td>${s.totalConnectors} slots</td>
-            <td>${statusLabel}</td>
-            <td>🟢 ${s.availableCount} available</td>
-            <td>${getTrustBadgeHTML(sourceLabel)}</td>
-            <td>
-                <button class="btn-action-view" onclick="openAdminEditModal('${s.id}')">EDIT / OVERRIDE</button>
-            </td>
+
+        return `
+            <tr>
+                <td><strong>${escapeHtml(s.title)}</strong> ${isRecommended ? '<span style="color:#facc15">★</span>' : ''}</td>
+                <td>${escapeHtml(s.operator)}</td>
+                <td class="cell-truncate">${escapeHtml(s.address)}</td>
+                <td>${s.totalConnectors} slots</td>
+                <td>${escapeHtml(statusLabel)}</td>
+                <td>🟢 ${s.availableCount} available</td>
+                <td>${getTrustBadgeHTML(sourceLabel)}</td>
+                <td>
+                    <button class="btn-action-view" onclick="openAdminEditModal('${s.id}')">EDIT / OVERRIDE</button>
+                </td>
+            </tr>
         `;
-        listBody.appendChild(tr);
-    });
+    }).join('');
+
+    if (pageLabel) {
+        const from = start + 1;
+        const to = Math.min(start + ADMIN_STATIONS_PAGE_SIZE, filtered.length);
+        pageLabel.textContent = `${from}–${to} of ${filtered.length.toLocaleString()}`;
+    }
 };
 
 /**
@@ -3424,7 +3622,7 @@ window.overrideChargerStatus = async function(stationId, chargerId, newStatus) {
     if (!confirmOverride) return;
 
     try {
-        const response = await fetch('/api/admin/charger/update', {
+        const response = await apiFetch('/api/admin/charger/update', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -3469,7 +3667,7 @@ window.saveAdminStationEdit = async function(e) {
 
     showStatus('Saving modifications...');
     try {
-        const response = await fetch('/api/admin/station/update', {
+        const response = await apiFetch('/api/admin/station/update', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -3655,7 +3853,7 @@ window.openVehicleSetupModal = async function() {
     // Warm cache the EV models database (all companies) from server
     if (cachedEvModels.length === 0) {
         try {
-            const res = await fetch('/api/ev-vehicles');
+            const res = await apiFetch('/api/ev-vehicles');
             if (res.ok) {
                 cachedEvModels = await res.json();
             }
@@ -3769,11 +3967,12 @@ window.handleSaveVehicleProfile = async function(e) {
 
     showStatus('Saving EV configuration...');
     try {
-        const res = await fetch('/api/user/vehicle', {
+        const res = await apiFetch('/api/user/vehicle', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                email: activeUser.email,
+                // No email: the server writes the profile of whoever the session
+                // token identifies, not whoever the request body names.
                 model: spec.modelFull,
                 vehicleNo: vehicleNo,
                 batteryCapacity: spec.batteryCapacity,
@@ -3808,58 +4007,526 @@ window.handleSaveVehicleProfile = async function(e) {
     }
 };
 
-window.triggerGoogleAuthLogin = function() {
-    const overlay = document.getElementById('google-auth-overlay');
-    if (!overlay) return;
-    
-    overlay.classList.remove('hidden');
-    const statusText = document.getElementById('g-auth-status');
-    
-    setTimeout(() => {
-        if (statusText) statusText.innerHTML = 'Exchanging secure Google OAuth 2.0 access credentials...';
-    }, 600);
-    
-    setTimeout(() => {
-        if (statusText) statusText.innerHTML = 'Verifying identity with Google Accounts database...';
-    }, 1200);
-    
-    setTimeout(async () => {
-        overlay.classList.add('hidden');
-        
-        // Log in silently as the default user using mock email in fallback
-        activeUser = { 
-            email: 'user@gridsync.in', 
-            role: 'User', 
-            name: 'Google User', 
-            phone: '+91 98765 43210',
-            savedStations: [], 
-            chargingHistory: [] 
-        };
-        
-        try {
-            const res = await fetch('/api/auth/login', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email: 'user@gridsync.in', password: 'user123' })
-            });
-            if (res.ok) {
-                const data = await res.json();
-                activeUser = data.user;
-            }
-        } catch (e) {
-            console.warn('User details fetch failed, running local mock Google user');
-        }
-        
-        // Hide login screen and show app shell
-        document.getElementById('login-screen').classList.add('hidden');
-        document.getElementById('user-app-shell').classList.remove('hidden');
-        switchUserTab('home');
-        initMap();
-        
-        showToastNotification(`Verified via Google Auth! Welcome, ${activeUser.name || 'GridSync Driver'}!`);
+/**
+ * One-click sign-in to the shared demo driver account.
+ *
+ * This used to present itself as "Verifying with Google Accounts / Exchanging
+ * OAuth 2.0 credentials" while doing nothing of the kind - no Google OAuth is
+ * configured for this app and no Google identity is ever checked. It signed
+ * into the built-in demo account either way, so it is now labelled for what it
+ * actually does. Wiring up real Google OAuth would mean a Google Identity
+ * client ID plus a server-side token-exchange endpoint.
+ */
+window.triggerDemoQuickLogin = async function() {
+    const overlay = document.getElementById('demo-auth-overlay');
+    if (overlay) overlay.classList.remove('hidden');
 
-        // Check for complete EV profile specs
-        checkUserVehicleProfile();
-        logAnalyticsEvent('session_start', null, { role: 'User', via: 'google' });
-    }, 2000);
+    try {
+        const res = await apiFetch('/api/auth/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: 'user@gridsync.in', password: 'user123' })
+        });
+
+        if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            showLoginError(err.error || 'Demo sign-in failed.');
+            return;
+        }
+
+        const data = await res.json();
+        persistSession(data.token, data.user);
+        enterAppAsUser(data.user);
+    } catch (e) {
+        console.error('Demo sign-in failed:', e);
+        showLoginError('Could not reach the GridSync server. Check your connection and try again.');
+    } finally {
+        if (overlay) overlay.classList.add('hidden');
+    }
 };
+
+
+// ==========================================
+// ADMIN OPS QUEUE, AUDIT & LIVE REFRESH
+// ==========================================
+
+/**
+ * Escapes untrusted text before it goes into innerHTML.
+ *
+ * Station titles, operators and addresses come from the Open Charge Map feed
+ * and from admin edits - i.e. from outside this app - and the admin tables
+ * interpolate them into template literals. Without escaping, a station named
+ * with a <script> or an onerror attribute would execute in the operator's
+ * session.
+ */
+function escapeHtml(value) {
+    if (value === null || value === undefined) return '';
+    return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+// --- Ops queue state --------------------------------------------------------
+
+let opsQueueData = { queue: [], counts: {}, totalReports: 0 };
+let opsFilter = 'all';
+let adminAuditEntries = [];
+let adminRefreshTimer = null;
+
+const ADMIN_REFRESH_INTERVAL_MS = 60000;
+
+function stationNameFor(stationId) {
+    const station = allStations.find(s => s.id === stationId);
+    return station ? station.title : stationId;
+}
+
+function formatRelativeTime(iso) {
+    if (!iso) return 'unknown';
+    const then = new Date(iso).getTime();
+    if (isNaN(then)) return 'unknown';
+    const diffMs = Date.now() - then;
+    const mins = Math.round(diffMs / 60000);
+    if (mins < 1) return 'just now';
+    if (mins < 60) return `${mins}m ago`;
+    const hours = Math.round(mins / 60);
+    if (hours < 24) return `${hours}h ago`;
+    const days = Math.round(hours / 24);
+    return `${days}d ago`;
+}
+
+/**
+ * Loads the severity-scored fault queue from the server and repaints the Ops
+ * tab plus the "Needs Attention" widget and nav badge on Overview.
+ */
+async function loadOpsQueue() {
+    try {
+        const res = await apiFetch('/api/admin/ops-queue');
+        if (!res.ok) return;
+        opsQueueData = await res.json();
+        renderOpsQueue();
+        renderOpsCounts();
+        renderNeedsAttention();
+    } catch (err) {
+        console.warn('Could not load ops queue:', err);
+    }
+}
+
+function renderOpsCounts() {
+    const counts = opsQueueData.counts || {};
+    const setText = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+    setText('ops-count-critical', counts.critical || 0);
+    setText('ops-count-open', counts.open || 0);
+    setText('ops-count-ack', counts.acknowledged || 0);
+    setText('ops-count-resolved', counts.resolved || 0);
+    setText('ops-count-reports', (opsQueueData.totalReports || 0).toLocaleString());
+
+    const badge = document.getElementById('adm-ops-badge');
+    if (badge) {
+        const open = counts.open || 0;
+        badge.textContent = open;
+        badge.classList.toggle('hidden', open === 0);
+    }
+
+    const sourceBadge = document.getElementById('ops-data-source');
+    if (sourceBadge) {
+        const isPersistent = opsQueueData.dataSource === 'SUPABASE';
+        sourceBadge.textContent = isPersistent ? 'PERSISTENT (SUPABASE)' : 'SESSION-ONLY (NOT CONFIGURED)';
+        sourceBadge.className = 'impact-source-badge' + (isPersistent ? ' persistent' : ' session-only');
+    }
+}
+
+window.setOpsFilter = function(filter) {
+    opsFilter = filter;
+    document.querySelectorAll('[data-ops-filter]').forEach(btn => {
+        btn.classList.toggle('active', btn.getAttribute('data-ops-filter') === filter);
+    });
+    renderOpsQueue();
+};
+
+function renderOpsQueue() {
+    const container = document.getElementById('ops-queue-list');
+    if (!container) return;
+
+    const items = (opsQueueData.queue || []).filter(
+        item => opsFilter === 'all' || item.status === opsFilter
+    );
+
+    if (items.length === 0) {
+        container.innerHTML = `<p class="no-data">${
+            opsFilter === 'all'
+                ? 'Nothing in the queue — no stations are currently flagged by drivers.'
+                : `No ${escapeHtml(opsFilter)} items.`
+        }</p>`;
+        return;
+    }
+
+    container.innerHTML = items.map(item => {
+        const name = escapeHtml(stationNameFor(item.stationId));
+        const known = allStations.some(s => s.id === item.stationId);
+        const severityClass = item.severity.toLowerCase();
+        return `
+            <div class="ops-card severity-${severityClass} status-${item.status}">
+                <div class="ops-card-main">
+                    <div class="ops-card-heading">
+                        <span class="ops-severity-badge ${severityClass}">${item.severity}</span>
+                        <span class="ops-status-chip ${item.status}">${item.status.toUpperCase()}</span>
+                        <h4>${name}</h4>
+                    </div>
+                    <p class="ops-card-meta">
+                        <strong>${item.broken}</strong> reported broken ·
+                        <strong>${item.working}</strong> reported working ·
+                        ${item.reporterCount} distinct ${item.reporterCount === 1 ? 'driver' : 'drivers'} ·
+                        last flagged ${formatRelativeTime(item.lastReportAt)}
+                    </p>
+                    ${item.resolvedBy ? `<p class="ops-card-resolution">Last actioned by ${escapeHtml(item.resolvedBy)}${item.resolutionNote ? ` — “${escapeHtml(item.resolutionNote)}”` : ''}</p>` : ''}
+                </div>
+                <div class="ops-card-actions">
+                    ${known ? `<button class="btn-ops-secondary" onclick="focusStationOnAdminMap('${item.stationId}')">View on map</button>` : ''}
+                    ${known ? `<button class="btn-ops-secondary" onclick="openAdminEditModal('${item.stationId}')">Edit station</button>` : ''}
+                    ${item.status !== 'acknowledged' && item.status !== 'resolved'
+                        ? `<button class="btn-ops-primary" onclick="triageOpsItem('${item.stationId}', 'acknowledged')">Acknowledge</button>` : ''}
+                    ${item.status !== 'resolved'
+                        ? `<button class="btn-ops-resolve" onclick="triageOpsItem('${item.stationId}', 'resolved')">Mark resolved</button>` : ''}
+                    ${item.status === 'resolved'
+                        ? `<button class="btn-ops-secondary" onclick="triageOpsItem('${item.stationId}', 'open')">Reopen</button>` : ''}
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+/**
+ * Advances one queue item through open -> acknowledged -> resolved. The note is
+ * optional; when supplied it is stored with the resolution and shown on the card.
+ */
+window.triageOpsItem = async function(stationId, status) {
+    let note = '';
+    if (status === 'resolved') {
+        note = prompt(`Resolution note for "${stationNameFor(stationId)}" (optional):`, '') || '';
+    }
+
+    try {
+        const res = await apiFetch('/api/admin/reports/resolve', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ stationId, status, note })
+        });
+
+        if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            showToastNotification(err.error || 'Could not update that item.');
+            return;
+        }
+
+        showToastNotification(`Marked ${status}.`);
+        await loadOpsQueue();
+        await loadAdminAudit();
+    } catch (err) {
+        console.error('Triage failed:', err);
+        showToastNotification('Could not reach the server.');
+    }
+};
+
+/**
+ * Jumps to the Live Control Map and opens the info window for one station.
+ */
+window.focusStationOnAdminMap = function(stationId) {
+    const station = allStations.find(s => s.id === stationId);
+    if (!station) return;
+    switchAdminTab('map');
+    setTimeout(() => {
+        if (map && typeof google !== 'undefined' && google.maps) {
+            map.setCenter({ lat: station.latitude, lng: station.longitude });
+            map.setZoom(15);
+            const marker = markerMap.get(stationId);
+            if (marker) google.maps.event.trigger(marker, 'click');
+        }
+    }, 250);
+};
+
+/**
+ * "Needs Attention" widget on Overview - the top few open queue items, so the
+ * landing tab points at work rather than just reporting that faults exist.
+ */
+function renderNeedsAttention() {
+    const body = document.getElementById('admin-recent-reports');
+    if (!body) return;
+
+    const open = (opsQueueData.queue || []).filter(i => i.status !== 'resolved').slice(0, 6);
+    if (open.length === 0) {
+        body.innerHTML = '<tr><td colspan="5" class="no-data">Nothing needs attention — no open fault reports.</td></tr>';
+        return;
+    }
+
+    body.innerHTML = open.map(item => `
+        <tr class="clickable-row" onclick="switchAdminTab('ops')">
+            <td><strong>${escapeHtml(stationNameFor(item.stationId))}</strong></td>
+            <td><span class="ops-severity-badge ${item.severity.toLowerCase()}">${item.severity}</span></td>
+            <td>${item.broken} broken / ${item.working} ok</td>
+            <td>${formatRelativeTime(item.lastReportAt)}</td>
+            <td><span class="ops-status-chip ${item.status}">${item.status.toUpperCase()}</span></td>
+        </tr>
+    `).join('');
+}
+
+// --- Audit trail ------------------------------------------------------------
+
+async function loadAdminAudit() {
+    try {
+        const res = await apiFetch('/api/admin/audit?limit=100');
+        if (!res.ok) return;
+        const data = await res.json();
+        adminAuditEntries = data.entries || [];
+        renderAdminAudit();
+    } catch (err) {
+        console.warn('Could not load audit log:', err);
+    }
+}
+
+function renderAdminAudit() {
+    const body = document.getElementById('admin-audit-body');
+    if (!body) return;
+
+    if (adminAuditEntries.length === 0) {
+        body.innerHTML = '<tr><td colspan="4" class="no-data">No admin actions recorded yet.</td></tr>';
+        return;
+    }
+
+    body.innerHTML = adminAuditEntries.map(entry => `
+        <tr>
+            <td title="${escapeHtml(entry.createdAt)}">${formatRelativeTime(entry.createdAt)}</td>
+            <td>${escapeHtml(entry.actor)}</td>
+            <td><code class="audit-action">${escapeHtml(entry.action)}</code></td>
+            <td class="cell-truncate">${escapeHtml(stationNameFor(entry.target))}</td>
+        </tr>
+    `).join('');
+}
+
+// --- Behavioural analytics charts ------------------------------------------
+
+async function loadAdminAnalyticsCharts() {
+    try {
+        const res = await apiFetch('/api/admin/analytics');
+        if (!res.ok) return;
+        const data = await res.json();
+        renderHourHistogram(data.hourHistogram || []);
+        renderActivityChart(data.dailyActivity || []);
+        renderConnectorMixChart(data.connectorMix || { AC: 0, DC: 0 });
+    } catch (err) {
+        console.warn('Could not load admin analytics:', err);
+    }
+}
+
+const CHART_AXIS_COLOR = '#94a3b8';
+const chartBaseOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    scales: {
+        y: { beginAtZero: true, ticks: { color: CHART_AXIS_COLOR, precision: 0 }, grid: { color: 'rgba(148,163,184,0.12)' } },
+        x: { ticks: { color: CHART_AXIS_COLOR }, grid: { display: false } }
+    }
+};
+
+function renderHourHistogram(histogram) {
+    const ctx = document.getElementById('hourHistogramChart');
+    if (!ctx || typeof Chart === 'undefined') return;
+    if (adminHourChart) adminHourChart.destroy();
+
+    adminHourChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: histogram.map(h => `${String(h.hour).padStart(2, '0')}:00`),
+            datasets: [{
+                label: 'Diversions',
+                data: histogram.map(h => h.count),
+                // Peak grid hours (17:00-20:00) are the ones an operator most
+                // wants to spot, so they are coloured distinctly.
+                backgroundColor: histogram.map(h => (h.hour >= 17 && h.hour <= 20) ? '#f97316' : '#10b981'),
+                borderRadius: 3
+            }]
+        },
+        options: { ...chartBaseOptions, plugins: { legend: { display: false } } }
+    });
+}
+
+function renderActivityChart(daily) {
+    const ctx = document.getElementById('activityChart');
+    if (!ctx || typeof Chart === 'undefined') return;
+    if (adminActivityChart) adminActivityChart.destroy();
+
+    const labels = daily.map(d => new Date(d.day).toLocaleDateString([], { month: 'short', day: 'numeric' }));
+    adminActivityChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels.length ? labels : ['No data yet'],
+            datasets: [
+                { label: 'Sessions', data: daily.map(d => d.sessions), borderColor: '#38bdf8', backgroundColor: 'rgba(56,189,248,0.12)', fill: true, tension: 0.3 },
+                { label: 'Routes planned', data: daily.map(d => d.routes), borderColor: '#a78bfa', backgroundColor: 'rgba(167,139,250,0.12)', fill: true, tension: 0.3 },
+                { label: 'Diversions', data: daily.map(d => d.diversions), borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,0.12)', fill: true, tension: 0.3 }
+            ]
+        },
+        options: { ...chartBaseOptions, plugins: { legend: { labels: { color: CHART_AXIS_COLOR } } } }
+    });
+}
+
+function renderConnectorMixChart(mix) {
+    const ctx = document.getElementById('connectorMixChart');
+    if (!ctx || typeof Chart === 'undefined') return;
+    if (adminConnectorChart) adminConnectorChart.destroy();
+
+    const hasData = (mix.AC || 0) + (mix.DC || 0) > 0;
+    adminConnectorChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: hasData ? ['AC (slow)', 'DC (fast)'] : ['No diversions yet'],
+            datasets: [{
+                data: hasData ? [mix.AC || 0, mix.DC || 0] : [1],
+                backgroundColor: hasData ? ['#38bdf8', '#10b981'] : ['#334155'],
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { position: 'bottom', labels: { color: CHART_AXIS_COLOR } } }
+        }
+    });
+}
+
+// --- CSV exports ------------------------------------------------------------
+
+/**
+ * Builds a CSV blob and triggers a download. Values are quoted and internal
+ * quotes doubled so commas in station names/addresses can't shift columns.
+ */
+function downloadCsv(filename, rows) {
+    const csv = rows.map(row =>
+        row.map(cell => `"${String(cell === null || cell === undefined ? '' : cell).replace(/"/g, '""')}"`).join(',')
+    ).join('\n');
+
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    showToastNotification(`Exported ${filename}`);
+}
+
+window.exportOpsQueueCsv = function() {
+    const rows = [['Station ID', 'Station', 'Severity', 'Status', 'Broken Reports', 'Working Reports', 'Distinct Reporters', 'Last Flagged', 'Actioned By', 'Note']];
+    (opsQueueData.queue || []).forEach(item => {
+        rows.push([
+            item.stationId, stationNameFor(item.stationId), item.severity, item.status,
+            item.broken, item.working, item.reporterCount, item.lastReportAt || '',
+            item.resolvedBy || '', item.resolutionNote || ''
+        ]);
+    });
+    downloadCsv(`gridsync-ops-queue-${new Date().toISOString().slice(0, 10)}.csv`, rows);
+};
+
+window.exportAuditCsv = function() {
+    const rows = [['Timestamp', 'Operator', 'Action', 'Target ID', 'Target Name', 'Details']];
+    adminAuditEntries.forEach(e => {
+        rows.push([e.createdAt, e.actor, e.action, e.target, stationNameFor(e.target), JSON.stringify(e.details || {})]);
+    });
+    downloadCsv(`gridsync-audit-${new Date().toISOString().slice(0, 10)}.csv`, rows);
+};
+
+window.exportStationsCsv = function() {
+    const rows = [['Station ID', 'Name', 'Operator', 'Address', 'Latitude', 'Longitude', 'Connectors', 'Available', 'Status', 'Community Fault', 'Admin Edited', 'Source']];
+    getFilteredAdminStations().forEach(s => {
+        rows.push([
+            s.id, s.title, s.operator, s.address, s.latitude, s.longitude,
+            s.totalConnectors, s.availableCount, s.status,
+            s.communityFault ? 'YES' : 'NO', s.adminUpdated ? 'YES' : 'NO',
+            s.adminUpdated ? 'ADMIN UPDATED' : (s.liveStatus ? 'LIVE' : 'STATIC')
+        ]);
+    });
+    downloadCsv(`gridsync-stations-${new Date().toISOString().slice(0, 10)}.csv`, rows);
+};
+
+// --- Live refresh -----------------------------------------------------------
+
+/**
+ * Re-pulls everything the admin console displays. `manual` distinguishes an
+ * operator pressing refresh (which shows a toast) from the background timer.
+ */
+window.refreshAdminData = async function(manual) {
+    const btn = document.getElementById('admin-refresh-btn');
+    if (btn) btn.classList.add('spinning');
+
+    try {
+        await syncDatabaseState();
+        allStations.forEach(s => applyOverridesAndReports(s));
+        await fetchIndiaEnergyAtlasGridData().catch(() => {});
+        await Promise.all([loadOpsQueue(), loadAdminAudit()]);
+        loadAdminDashboard();
+        markAdminSynced();
+        if (manual) showToastNotification('Dashboard refreshed.');
+    } catch (err) {
+        console.warn('Admin refresh failed:', err);
+    } finally {
+        if (btn) btn.classList.remove('spinning');
+    }
+};
+
+function markAdminSynced() {
+    const label = document.getElementById('admin-sync-label');
+    if (label) {
+        label.textContent = `Synced ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+    }
+    const state = document.getElementById('admin-sync-state');
+    if (state) state.classList.add('live');
+}
+
+function startAdminAutoRefresh() {
+    stopAdminAutoRefresh();
+    adminRefreshTimer = setInterval(() => {
+        // Skip while the tab is hidden - no point polling a backgrounded console.
+        if (document.hidden) return;
+        refreshAdminData(false);
+    }, ADMIN_REFRESH_INTERVAL_MS);
+}
+
+function stopAdminAutoRefresh() {
+    if (adminRefreshTimer) {
+        clearInterval(adminRefreshTimer);
+        adminRefreshTimer = null;
+    }
+}
+
+// ==========================================
+// BOOT
+// ==========================================
+
+/**
+ * Restores a signed-in session on page load so a refresh doesn't dump the user
+ * back to the login screen. The token is validated server-side on the first
+ * API call; if it has expired, apiFetch's 401 handler returns them to login.
+ */
+(function bootGridSync() {
+    const start = () => {
+        const user = restoreSession();
+        if (user) {
+            try {
+                enterAppAsUser(user);
+            } catch (e) {
+                console.warn('Session restore failed, showing login:', e);
+                persistSession(null, null);
+            }
+        }
+    };
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', start);
+    } else {
+        start();
+    }
+})();

@@ -3886,3 +3886,453 @@ html, body {
         font-size: 0.7rem;
     }
 }
+
+
+/* ==========================================================================
+   ADMIN OPS QUEUE, AUDIT TRAIL & LIVE REFRESH
+   Added alongside the ops-queue console. Follows the existing dark "glass"
+   token set (slate surfaces, #10b981 accent) rather than introducing a
+   second palette.
+   ========================================================================== */
+
+/* --- Header sync state + refresh ----------------------------------------- */
+
+.admin-sync-state {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.72rem;
+    color: #94a3b8;
+    letter-spacing: 0.02em;
+}
+
+.admin-sync-state .sync-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #64748b;
+    transition: background 0.3s ease;
+}
+
+.admin-sync-state.live .sync-dot {
+    background: #10b981;
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.18);
+}
+
+.btn-admin-refresh {
+    background: rgba(148, 163, 184, 0.12);
+    border: 1px solid rgba(148, 163, 184, 0.22);
+    color: #e2e8f0;
+    border-radius: 8px;
+    width: 34px;
+    height: 34px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.btn-admin-refresh:hover {
+    background: rgba(16, 185, 129, 0.16);
+    border-color: rgba(16, 185, 129, 0.4);
+}
+
+.btn-admin-refresh .material-symbols-outlined {
+    font-size: 19px;
+}
+
+.btn-admin-refresh.spinning .material-symbols-outlined {
+    animation: gs-spin 0.9s linear infinite;
+}
+
+@keyframes gs-spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Respect users who have asked the OS to reduce motion. */
+@media (prefers-reduced-motion: reduce) {
+    .btn-admin-refresh.spinning .material-symbols-outlined { animation: none; }
+}
+
+/* --- Nav badge ----------------------------------------------------------- */
+
+#admin-top-navigation .admin-nav-btn {
+    position: relative;
+}
+
+.nav-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    margin-left: 6px;
+    border-radius: 9px;
+    background: #ef4444;
+    color: #fff;
+    font-size: 0.65rem;
+    font-weight: 700;
+    line-height: 1;
+    vertical-align: middle;
+}
+
+/* --- Ops queue ----------------------------------------------------------- */
+
+.ops-header-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 6px;
+}
+
+.ops-subtitle {
+    margin: 4px 0 0;
+    font-size: 0.78rem;
+    color: #94a3b8;
+    max-width: 70ch;
+    line-height: 1.5;
+}
+
+.ops-filter-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin: 18px 0 14px;
+}
+
+.ops-filter-row label {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #64748b;
+    margin-right: 2px;
+}
+
+.ops-queue-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.ops-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+    flex-wrap: wrap;
+    padding: 14px 16px;
+    background: rgba(30, 41, 59, 0.72);
+    border: 1px solid rgba(148, 163, 184, 0.16);
+    border-left: 3px solid #64748b;
+    border-radius: 10px;
+    transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.ops-card:hover {
+    background: rgba(30, 41, 59, 0.92);
+}
+
+.ops-card.severity-critical { border-left-color: #ef4444; }
+.ops-card.severity-high     { border-left-color: #f97316; }
+.ops-card.severity-medium   { border-left-color: #eab308; }
+.ops-card.severity-low      { border-left-color: #64748b; }
+
+.ops-card.status-resolved {
+    opacity: 0.62;
+}
+
+.ops-card-main {
+    flex: 1 1 320px;
+    min-width: 0;
+}
+
+.ops-card-heading {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.ops-card-heading h4 {
+    margin: 0;
+    font-size: 0.95rem;
+    color: #f1f5f9;
+    font-weight: 600;
+}
+
+.ops-severity-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 5px;
+    font-size: 0.63rem;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    color: #0f172a;
+}
+
+.ops-severity-badge.critical { background: #ef4444; color: #fff; }
+.ops-severity-badge.high     { background: #f97316; color: #fff; }
+.ops-severity-badge.medium   { background: #eab308; }
+.ops-severity-badge.low      { background: #64748b; color: #fff; }
+
+.ops-status-chip {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 5px;
+    font-size: 0.63rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    border: 1px solid transparent;
+}
+
+.ops-status-chip.open         { background: rgba(239, 68, 68, 0.14);  color: #fca5a5; border-color: rgba(239, 68, 68, 0.32); }
+.ops-status-chip.acknowledged { background: rgba(234, 179, 8, 0.14);  color: #fde047; border-color: rgba(234, 179, 8, 0.32); }
+.ops-status-chip.resolved     { background: rgba(16, 185, 129, 0.14); color: #6ee7b7; border-color: rgba(16, 185, 129, 0.32); }
+
+.ops-card-meta {
+    margin: 7px 0 0;
+    font-size: 0.76rem;
+    color: #94a3b8;
+    line-height: 1.5;
+}
+
+.ops-card-meta strong {
+    color: #e2e8f0;
+}
+
+.ops-card-resolution {
+    margin: 6px 0 0;
+    font-size: 0.73rem;
+    color: #6ee7b7;
+    font-style: italic;
+}
+
+.ops-card-actions {
+    display: flex;
+    gap: 7px;
+    flex-wrap: wrap;
+    flex-shrink: 0;
+}
+
+.ops-card-actions button {
+    border-radius: 7px;
+    padding: 7px 12px;
+    font-size: 0.73rem;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: filter 0.15s ease, background 0.15s ease;
+    min-height: 34px;
+}
+
+.ops-card-actions button:hover { filter: brightness(1.14); }
+
+.btn-ops-primary {
+    background: #eab308;
+    color: #0f172a;
+}
+
+.btn-ops-resolve {
+    background: #10b981;
+    color: #052e21;
+}
+
+.btn-ops-secondary {
+    background: rgba(148, 163, 184, 0.14);
+    color: #cbd5e1;
+    border-color: rgba(148, 163, 184, 0.26) !important;
+}
+
+/* --- Shared admin bits ---------------------------------------------------- */
+
+.widget-header-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 10px;
+}
+
+.widget-header-row h3 {
+    margin: 0;
+}
+
+.widget-hint {
+    font-size: 0.7rem;
+    color: #64748b;
+}
+
+.btn-link-inline {
+    background: none;
+    border: none;
+    color: #10b981;
+    font-size: 0.76rem;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 2px 4px;
+}
+
+.btn-link-inline:hover { text-decoration: underline; }
+
+.btn-export-csv {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: rgba(16, 185, 129, 0.12);
+    border: 1px solid rgba(16, 185, 129, 0.32);
+    color: #6ee7b7;
+    border-radius: 7px;
+    padding: 7px 12px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    cursor: pointer;
+    min-height: 34px;
+}
+
+.btn-export-csv:hover { background: rgba(16, 185, 129, 0.2); }
+
+.btn-export-csv .material-symbols-outlined { font-size: 15px; }
+
+.clickable-row { cursor: pointer; }
+.clickable-row:hover { background: rgba(148, 163, 184, 0.07); }
+
+.cell-truncate {
+    max-width: 220px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 0.72rem;
+}
+
+.audit-action {
+    background: rgba(148, 163, 184, 0.13);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    color: #cbd5e1;
+}
+
+.audit-scroll {
+    max-height: 320px;
+    overflow-y: auto;
+}
+
+/* --- Table pagination ----------------------------------------------------- */
+
+.table-pagination {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    padding: 14px 0 4px;
+}
+
+.btn-page {
+    background: rgba(148, 163, 184, 0.12);
+    border: 1px solid rgba(148, 163, 184, 0.24);
+    color: #cbd5e1;
+    border-radius: 7px;
+    padding: 7px 16px;
+    font-size: 0.76rem;
+    font-weight: 600;
+    cursor: pointer;
+    min-height: 36px;
+}
+
+.btn-page:hover { background: rgba(16, 185, 129, 0.16); }
+
+.page-indicator {
+    font-size: 0.76rem;
+    color: #94a3b8;
+    min-width: 130px;
+    text-align: center;
+}
+
+/* --- Login error + demo sign-in ------------------------------------------- */
+
+.login-error {
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.34);
+    color: #b91c1c;
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 0.8rem;
+    margin: 4px 0 12px;
+    line-height: 1.45;
+}
+
+.btn-demo-auth {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    background: #ffffff;
+    border: 1px solid #d5dbe4;
+    color: #1e293b;
+    border-radius: 10px;
+    padding: 12px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    min-height: 46px;
+    transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.btn-demo-auth:hover {
+    background: #f1f5f9;
+    border-color: #10b981;
+}
+
+.btn-demo-auth .material-symbols-outlined {
+    font-size: 19px;
+    color: #10b981;
+}
+
+/* --- Mobile ---------------------------------------------------------------
+   The admin console is desktop-first, but the ops queue is the one surface an
+   operator may well open on a phone while standing at a charger. */
+
+@media (max-width: 768px) {
+    .ops-card {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .ops-card-actions {
+        width: 100%;
+    }
+
+    .ops-card-actions button {
+        flex: 1 1 calc(50% - 4px);
+        min-height: 44px;
+    }
+
+    .ops-header-row {
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .admin-sync-state {
+        display: none;
+    }
+
+    .cell-truncate {
+        max-width: 130px;
+    }
+
+    .table-pagination {
+        gap: 8px;
+    }
+
+    .btn-page {
+        min-height: 44px;
+        flex: 1;
+    }
+}

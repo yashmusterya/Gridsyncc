@@ -1,9 +1,10 @@
 node_modules/
-.env
-.env.local
-.vercel
-__MACOSX/
 .DS_Store
+__MACOSX/
 
+# Vercel
 .vercel
+
+# Secrets: ignore every .env variant, but keep the committed template.
 .env*
+!.env.example

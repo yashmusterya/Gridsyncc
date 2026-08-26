@@ -2,7 +2,7 @@ const https = require('https');
 const fs = require('fs');
 const path = require('path');
 const url = require('url');
-const { hashPassword, verifyPassword } = require('../lib/auth');
+const { hashPassword, verifyPassword, signToken, getAuthContext } = require('../lib/auth');
 const { readStore, writeStore } = require('../lib/store');
 
 // Environment variables (Vercel injects process.env directly; `vercel dev` also
@@ -371,6 +371,270 @@ const LOCAL_EPA_FALLBACK = {
     }
 };
 
+// ---------------------------------------------------------------------------
+// Auth guards, audit trail and login throttling.
+//
+// Every /api/admin/* route and the fleet-wide /api/analytics/summary sit behind
+// requireAdmin. Before this existed the admin endpoints were completely
+// unauthenticated - anyone who knew the URL could rewrite station metadata on
+// the live deployment - and "admin" was purely a client-side flag the browser
+// set on itself.
+const sendJson = (res, status, payload) => {
+    res.writeHead(status, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify(payload));
+};
+
+// Returns the token payload, or null after already writing a 401/403.
+function requireAuth(req, res) {
+    const auth = getAuthContext(req);
+    if (!auth) {
+        sendJson(res, 401, { error: 'Authentication required. Please sign in again.' });
+        return null;
+    }
+    return auth;
+}
+
+function requireAdmin(req, res) {
+    const auth = getAuthContext(req);
+    if (!auth) {
+        sendJson(res, 401, { error: 'Authentication required. Please sign in again.' });
+        return null;
+    }
+    if (auth.role !== 'Admin') {
+        sendJson(res, 403, { error: 'Administrator privileges required.' });
+        return null;
+    }
+    return auth;
+}
+
+const AUDIT_LIMIT = 500;
+
+// Append an admin action to the audit trail. Best-effort: an audit write must
+// never fail the action it is recording, so Supabase errors fall through to the
+// local store and are only logged.
+async function recordAudit(store, auth, action, target, details) {
+    const entry = {
+        actor: (auth && auth.email) || 'unknown',
+        action,
+        target: target || '',
+        details: details || {},
+        createdAt: new Date().toISOString()
+    };
+
+    if (supabaseEnabled()) {
+        try {
+            await supabaseRequest('POST', 'audit_log', {
+                body: {
+                    actor: entry.actor,
+                    action: entry.action,
+                    target: entry.target,
+                    details: entry.details,
+                    created_at: entry.createdAt
+                }
+            });
+            return entry;
+        } catch (err) {
+            console.error('Supabase audit write error, falling back to local store:', err.message);
+        }
+    }
+
+    store.audit = store.audit || [];
+    store.audit.unshift(entry);
+    if (store.audit.length > AUDIT_LIMIT) store.audit.length = AUDIT_LIMIT;
+    writeStore(store);
+    return entry;
+}
+
+async function fetchAuditLog(store, limit = 100) {
+    if (supabaseEnabled()) {
+        try {
+            const rows = await supabaseRequest('GET', 'audit_log', {
+                query: `select=actor,action,target,details,created_at&order=created_at.desc&limit=${limit}`
+            });
+            return (rows || []).map(r => ({
+                actor: r.actor, action: r.action, target: r.target,
+                details: r.details || {}, createdAt: r.created_at
+            }));
+        } catch (err) {
+            console.error('Supabase audit fetch error, falling back to local store:', err.message);
+        }
+    }
+    return (store.audit || []).slice(0, limit);
+}
+
+// ---------------------------------------------------------------------------
+// Ops queue.
+//
+// The admin Overview used to show community fault reports as a flat read-only
+// table, which told an operator that something was wrong but not what to do
+// about it. These helpers turn the raw report stream into a triageable queue:
+// grouped per station, scored by severity, and carrying a resolution state an
+// operator can advance (open -> acknowledged -> resolved).
+async function fetchAllReports(store) {
+    if (supabaseEnabled()) {
+        try {
+            const rows = await supabaseRequest('GET', 'reports', {
+                query: 'select=station_id,working,user_email,created_at&order=created_at.desc&limit=2000'
+            });
+            return (rows || []).map(r => ({
+                stationId: r.station_id,
+                working: r.working,
+                userEmail: r.user_email,
+                timestamp: r.created_at
+            }));
+        } catch (err) {
+            console.error('Supabase reports fetch error, falling back to local store:', err.message);
+        }
+    }
+    return store.reports || [];
+}
+
+async function fetchReportResolutions(store) {
+    if (supabaseEnabled()) {
+        try {
+            const rows = await supabaseRequest('GET', 'report_resolutions', { query: 'select=*' });
+            const map = {};
+            (rows || []).forEach(r => {
+                map[r.station_id] = {
+                    status: r.status, actor: r.actor, note: r.note, at: r.updated_at
+                };
+            });
+            return map;
+        } catch (err) {
+            console.error('Supabase resolutions fetch error, falling back to local store:', err.message);
+        }
+    }
+    return store.reportResolutions || {};
+}
+
+function severityFor(netFault) {
+    if (netFault >= 3) return 'CRITICAL';
+    if (netFault === 2) return 'HIGH';
+    if (netFault === 1) return 'MEDIUM';
+    return 'LOW';
+}
+
+// Group reports by station into scored, triageable queue items.
+function buildOpsQueue(reports, resolutions) {
+    const byStation = {};
+
+    reports.forEach(r => {
+        if (!r.stationId) return;
+        if (!byStation[r.stationId]) {
+            byStation[r.stationId] = {
+                stationId: r.stationId, broken: 0, working: 0,
+                lastReportAt: null, reporters: new Set()
+            };
+        }
+        const item = byStation[r.stationId];
+        if (r.working) item.working++; else item.broken++;
+        if (r.userEmail) item.reporters.add(r.userEmail);
+        if (!item.lastReportAt || (r.timestamp && r.timestamp > item.lastReportAt)) {
+            item.lastReportAt = r.timestamp;
+        }
+    });
+
+    return Object.values(byStation).map(item => {
+        const netFault = item.broken - item.working;
+        const resolution = resolutions[item.stationId];
+
+        // A station that was resolved but has been reported broken again since
+        // is reopened rather than staying silently closed.
+        let status = 'open';
+        if (resolution) {
+            const staleResolution = resolution.at && item.lastReportAt && item.lastReportAt > resolution.at;
+            status = staleResolution ? 'open' : resolution.status;
+        }
+
+        return {
+            stationId: item.stationId,
+            broken: item.broken,
+            working: item.working,
+            netFault,
+            severity: severityFor(netFault),
+            reporterCount: item.reporters.size,
+            lastReportAt: item.lastReportAt,
+            status,
+            resolvedBy: resolution ? resolution.actor : null,
+            resolutionNote: resolution ? resolution.note : null
+        };
+    })
+    .filter(item => item.netFault > 0 || item.status !== 'open')
+    .sort((a, b) => {
+        // Open items first, then by severity, then most recently reported.
+        if ((a.status === 'open') !== (b.status === 'open')) return a.status === 'open' ? -1 : 1;
+        if (b.netFault !== a.netFault) return b.netFault - a.netFault;
+        return String(b.lastReportAt || '').localeCompare(String(a.lastReportAt || ''));
+    });
+}
+
+// Deeper analytics cuts for the admin Analytics tab: when diversions actually
+// happen, what mix of hardware they land on, and how activity trends per day.
+function buildAdminAnalytics(events) {
+    const hourHistogram = Array.from({ length: 24 }, (_, h) => ({ hour: h, count: 0 }));
+    const connectorMix = { AC: 0, DC: 0 };
+    const gridLoadMix = { LOW: 0, MEDIUM: 0, HIGH: 0 };
+    const dailyActivity = {};
+
+    events.forEach(e => {
+        const day = (e.createdAt || '').slice(0, 10);
+        if (day) {
+            if (!dailyActivity[day]) dailyActivity[day] = { day, sessions: 0, routes: 0, diversions: 0 };
+            if (e.type === 'session_start') dailyActivity[day].sessions++;
+            if (e.type === 'route_planned') dailyActivity[day].routes++;
+            if (e.type === 'charger_diverted') dailyActivity[day].diversions++;
+        }
+
+        if (e.type !== 'charger_diverted') return;
+
+        const when = e.createdAt ? new Date(e.createdAt) : null;
+        if (when && !isNaN(when)) hourHistogram[when.getHours()].count++;
+
+        const meta = e.metadata || {};
+        if (meta.chargerType === 'DC') connectorMix.DC++; else connectorMix.AC++;
+        const load = meta.gridLoad || 'MEDIUM';
+        if (gridLoadMix[load] !== undefined) gridLoadMix[load]++;
+    });
+
+    return {
+        hourHistogram,
+        connectorMix,
+        gridLoadMix,
+        dailyActivity: Object.values(dailyActivity).sort((a, b) => a.day.localeCompare(b.day)).slice(-30)
+    };
+}
+
+// Login throttling. Best-effort only: the backing store is per-instance on
+// serverless, so this raises the cost of a brute-force run without pretending
+// to be a distributed rate limiter.
+const LOGIN_MAX_ATTEMPTS = 8;
+const LOGIN_WINDOW_MS = 10 * 60 * 1000;
+
+function loginThrottled(store, key) {
+    const rec = (store.loginAttempts || {})[key];
+    if (!rec) return false;
+    if (Date.now() - rec.first > LOGIN_WINDOW_MS) return false;
+    return rec.count >= LOGIN_MAX_ATTEMPTS;
+}
+
+function recordLoginFailure(store, key) {
+    store.loginAttempts = store.loginAttempts || {};
+    const rec = store.loginAttempts[key];
+    if (!rec || Date.now() - rec.first > LOGIN_WINDOW_MS) {
+        store.loginAttempts[key] = { count: 1, first: Date.now() };
+    } else {
+        rec.count += 1;
+    }
+    writeStore(store);
+}
+
+function clearLoginFailures(store, key) {
+    if (store.loginAttempts && store.loginAttempts[key]) {
+        delete store.loginAttempts[key];
+        writeStore(store);
+    }
+}
+
 module.exports = async (req, res) => {
     const parsedUrl = url.parse(req.url, true);
     const pathname = parsedUrl.pathname;
@@ -511,16 +775,24 @@ module.exports = async (req, res) => {
 
     // API Endpoint: Save EV Trip (Supabase Proxy with In-Memory fallback)
     if (pathname === '/api/save-trip' && req.method === 'POST') {
+        const auth = requireAuth(req, res);
+        if (!auth) return;
+
         if (!body) {
             res.writeHead(400, { 'Content-Type': 'application/json' });
             return res.end(JSON.stringify({ error: 'Invalid JSON request body.' }));
         }
-        const tripData = { ...body, created_at: new Date().toISOString(), id: Date.now().toString() };
+        const tripData = {
+            ...body,
+            userEmail: auth.email,
+            created_at: new Date().toISOString(),
+            id: Date.now().toString()
+        };
 
         if (supabaseEnabled()) {
             try {
                 await supabaseRequest('POST', 'saved_trips', {
-                    body: { id: tripData.id, created_at: tripData.created_at, data: body },
+                    body: { id: tripData.id, created_at: tripData.created_at, user_email: auth.email, data: body },
                     extraHeaders: { 'Prefer': 'return=representation' }
                 });
                 res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -542,18 +814,29 @@ module.exports = async (req, res) => {
 
     // API Endpoint: Get Saved Trips (Supabase Proxy with In-Memory fallback)
     if (pathname === '/api/get-saved-trips' && req.method === 'GET') {
+        const auth = requireAuth(req, res);
+        if (!auth) return;
+
+        // Scoped to the caller. Admins get the whole list for support purposes;
+        // drivers only ever see their own saved trips.
+        const scopeToSelf = auth.role !== 'Admin';
+
         if (supabaseEnabled()) {
             try {
-                const rows = await supabaseRequest('GET', 'saved_trips', { query: 'select=*&order=created_at.desc' });
+                let query = 'select=*&order=created_at.desc';
+                if (scopeToSelf) query += `&user_email=eq.${encodeURIComponent(auth.email)}`;
+                const rows = await supabaseRequest('GET', 'saved_trips', { query });
                 const trips = (rows || []).map(r => ({ ...r.data, id: r.id, created_at: r.created_at }));
-                res.writeHead(200, { 'Content-Type': 'application/json' });
-                return res.end(JSON.stringify(trips));
+                return sendJson(res, 200, trips);
             } catch (err) {
                 console.error('Supabase fetch proxy error:', err.message);
             }
         }
-        res.writeHead(200, { 'Content-Type': 'application/json' });
-        return res.end(JSON.stringify(store.savedTrips));
+
+        const trips = scopeToSelf
+            ? store.savedTrips.filter(t => t.userEmail === auth.email)
+            : store.savedTrips;
+        return sendJson(res, 200, trips);
     }
 
     // API Endpoint: User/Admin Authentication Login
@@ -561,6 +844,13 @@ module.exports = async (req, res) => {
         if (!body || !body.email || !body.password) {
             res.writeHead(400, { 'Content-Type': 'application/json' });
             return res.end(JSON.stringify({ error: 'Missing email/password' }));
+        }
+
+        const throttleKey = String(body.email).toLowerCase();
+        if (loginThrottled(store, throttleKey)) {
+            return sendJson(res, 429, {
+                error: 'Too many failed sign-in attempts. Please wait a few minutes and try again.'
+            });
         }
 
         let user = null;
@@ -578,11 +868,15 @@ module.exports = async (req, res) => {
         }
 
         if (!user || !verifyPassword(body.password, user.password)) {
-            res.writeHead(401, { 'Content-Type': 'application/json' });
-            return res.end(JSON.stringify({ error: 'Invalid email or password' }));
+            recordLoginFailure(store, throttleKey);
+            // Deliberately identical message for unknown-user and wrong-password
+            // so the response can't be used to enumerate valid accounts.
+            return sendJson(res, 401, { error: 'Invalid email or password' });
         }
-        res.writeHead(200, { 'Content-Type': 'application/json' });
-        return res.end(JSON.stringify({ status: 'SUCCESS', user: toSafeUser(user) }));
+
+        clearLoginFailures(store, throttleKey);
+        const token = signToken({ email: user.email, role: user.role, name: user.name });
+        return sendJson(res, 200, { status: 'SUCCESS', user: toSafeUser(user), token });
     }
 
     // API Endpoint: User Registration
@@ -617,8 +911,11 @@ module.exports = async (req, res) => {
                     return res.end(JSON.stringify({ error: 'User already exists' }));
                 }
                 await supabaseRequest('POST', 'users', { body: userToRow(newUser), extraHeaders: { 'Prefer': 'return=representation' } });
-                res.writeHead(200, { 'Content-Type': 'application/json' });
-                return res.end(JSON.stringify({ status: 'SUCCESS', user: toSafeUser(newUser) }));
+                return sendJson(res, 200, {
+                    status: 'SUCCESS',
+                    user: toSafeUser(newUser),
+                    token: signToken({ email: newUser.email, role: newUser.role, name: newUser.name })
+                });
             } catch (err) {
                 console.error('Supabase register error, falling back to in-memory:', err.message);
             }
@@ -631,8 +928,11 @@ module.exports = async (req, res) => {
         }
         store.users.push(newUser);
         writeStore(store);
-        res.writeHead(200, { 'Content-Type': 'application/json' });
-        return res.end(JSON.stringify({ status: 'SUCCESS', user: toSafeUser(newUser) }));
+        return sendJson(res, 200, {
+            status: 'SUCCESS',
+            user: toSafeUser(newUser),
+            token: signToken({ email: newUser.email, role: newUser.role, name: newUser.name })
+        });
     }
 
     // API Endpoint: Get EPA Makes
@@ -796,10 +1096,18 @@ module.exports = async (req, res) => {
 
     // API Endpoint: Save User EV profile
     if (pathname === '/api/user/vehicle' && req.method === 'POST') {
-        if (!body || !body.email || !body.model || !body.vehicleNo) {
+        const auth = requireAuth(req, res);
+        if (!auth) return;
+
+        if (!body || !body.model || !body.vehicleNo) {
             res.writeHead(400, { 'Content-Type': 'application/json' });
-            return res.end(JSON.stringify({ error: 'Missing email, model, or vehicle number' }));
+            return res.end(JSON.stringify({ error: 'Missing model or vehicle number' }));
         }
+
+        // The profile being written is always the caller's own, taken from the
+        // signed token - a client-supplied body.email would let any signed-in
+        // driver overwrite someone else's vehicle profile.
+        const targetEmail = auth.email;
 
         const updates = {
             vehicleModel: body.model,
@@ -812,7 +1120,7 @@ module.exports = async (req, res) => {
 
         if (supabaseEnabled()) {
             try {
-                const rows = await supabaseRequest('PATCH', `users?email=eq.${encodeURIComponent(body.email)}`, {
+                const rows = await supabaseRequest('PATCH', `users?email=eq.${encodeURIComponent(targetEmail)}`, {
                     body: {
                         vehicle_model: updates.vehicleModel,
                         vehicle_no: updates.vehicleNo,
@@ -834,7 +1142,7 @@ module.exports = async (req, res) => {
             }
         }
 
-        const user = store.users.find(u => u.email === body.email);
+        const user = store.users.find(u => u.email === targetEmail);
         if (!user) {
             res.writeHead(404, { 'Content-Type': 'application/json' });
             return res.end(JSON.stringify({ error: 'User not found' }));
@@ -847,6 +1155,9 @@ module.exports = async (req, res) => {
 
     // API Endpoint: Submit Charger Working Report
     if (pathname === '/api/reports/add' && req.method === 'POST') {
+        const auth = requireAuth(req, res);
+        if (!auth) return;
+
         if (!body || !body.stationId || body.working === undefined) {
             res.writeHead(400, { 'Content-Type': 'application/json' });
             return res.end(JSON.stringify({ error: 'Missing stationId or working flag' }));
@@ -855,7 +1166,10 @@ module.exports = async (req, res) => {
             stationId: body.stationId,
             working: body.working,
             timestamp: new Date().toISOString(),
-            userEmail: body.userEmail || 'anonymous'
+            // Attributed to the signed-in reporter, not a client-supplied
+            // address - the ops queue counts *distinct* reporters, so a
+            // spoofable identity would let one client fake a consensus.
+            userEmail: auth.email
         };
 
         if (supabaseEnabled()) {
@@ -905,6 +1219,9 @@ module.exports = async (req, res) => {
 
     // API Endpoint: Admin Update Station Metadata
     if (pathname === '/api/admin/station/update' && req.method === 'POST') {
+        const auth = requireAdmin(req, res);
+        if (!auth) return;
+
         if (!body || !body.stationId) {
             res.writeHead(400, { 'Content-Type': 'application/json' });
             return res.end(JSON.stringify({ error: 'Missing stationId' }));
@@ -944,12 +1261,19 @@ module.exports = async (req, res) => {
             }
         }
 
-        res.writeHead(200, { 'Content-Type': 'application/json' });
-        return res.end(JSON.stringify({ status: 'SUCCESS', overrides: store.adminOverrides }));
+        await recordAudit(store, auth, 'station.update', stationId, {
+            title: override.title,
+            operator: override.operator
+        });
+
+        return sendJson(res, 200, { status: 'SUCCESS', overrides: store.adminOverrides });
     }
 
     // API Endpoint: Admin Update Charger Status
     if (pathname === '/api/admin/charger/update' && req.method === 'POST') {
+        const auth = requireAdmin(req, res);
+        if (!auth) return;
+
         if (!body || !body.stationId || !body.chargerId || !body.status) {
             res.writeHead(400, { 'Content-Type': 'application/json' });
             return res.end(JSON.stringify({ error: 'Missing stationId, chargerId or status' }));
@@ -974,12 +1298,15 @@ module.exports = async (req, res) => {
             }
         }
 
-        res.writeHead(200, { 'Content-Type': 'application/json' });
-        return res.end(JSON.stringify({ status: 'SUCCESS', overrides: store.adminOverrides }));
+        await recordAudit(store, auth, 'charger.status', `${stationId}/${chargerId}`, { status: body.status });
+
+        return sendJson(res, 200, { status: 'SUCCESS', overrides: store.adminOverrides });
     }
 
     // API Endpoint: Get All Admin Overrides
     if (pathname === '/api/admin/overrides' && req.method === 'GET') {
+        if (!requireAuth(req, res)) return;
+
         if (supabaseEnabled()) {
             try {
                 const [stationRows, chargerRows] = await Promise.all([
@@ -1006,6 +1333,112 @@ module.exports = async (req, res) => {
         }
         res.writeHead(200, { 'Content-Type': 'application/json' });
         return res.end(JSON.stringify(store.adminOverrides));
+    }
+
+    // API Endpoint: Admin ops queue - community fault reports grouped per
+    // station, severity-scored and carrying triage state.
+    if (pathname === '/api/admin/ops-queue' && req.method === 'GET') {
+        if (!requireAdmin(req, res)) return;
+
+        const [reports, resolutions] = await Promise.all([
+            fetchAllReports(store),
+            fetchReportResolutions(store)
+        ]);
+        const queue = buildOpsQueue(reports, resolutions);
+
+        return sendJson(res, 200, {
+            queue,
+            counts: {
+                total: queue.length,
+                open: queue.filter(q => q.status === 'open').length,
+                acknowledged: queue.filter(q => q.status === 'acknowledged').length,
+                resolved: queue.filter(q => q.status === 'resolved').length,
+                critical: queue.filter(q => q.status === 'open' && q.severity === 'CRITICAL').length
+            },
+            totalReports: reports.length,
+            dataSource: supabaseEnabled() ? 'SUPABASE' : 'SESSION_ONLY'
+        });
+    }
+
+    // API Endpoint: Admin triage action on one ops-queue item.
+    if (pathname === '/api/admin/reports/resolve' && req.method === 'POST') {
+        const auth = requireAdmin(req, res);
+        if (!auth) return;
+
+        const validStatuses = ['open', 'acknowledged', 'resolved'];
+        if (!body || !body.stationId || !validStatuses.includes(body.status)) {
+            return sendJson(res, 400, {
+                error: `Missing stationId, or status not one of: ${validStatuses.join(', ')}`
+            });
+        }
+
+        const record = {
+            status: body.status,
+            actor: auth.email,
+            note: (body.note || '').slice(0, 500),
+            at: new Date().toISOString()
+        };
+
+        store.reportResolutions = store.reportResolutions || {};
+        store.reportResolutions[body.stationId] = record;
+        writeStore(store);
+
+        if (supabaseEnabled()) {
+            try {
+                await supabaseRequest('POST', 'report_resolutions?on_conflict=station_id', {
+                    body: {
+                        station_id: body.stationId,
+                        status: record.status,
+                        actor: record.actor,
+                        note: record.note,
+                        updated_at: record.at
+                    },
+                    extraHeaders: { 'Prefer': 'resolution=merge-duplicates' }
+                });
+            } catch (err) {
+                console.error('Supabase resolution upsert error (local mirror kept):', err.message);
+            }
+        }
+
+        await recordAudit(store, auth, `report.${record.status}`, body.stationId, { note: record.note });
+        return sendJson(res, 200, { status: 'SUCCESS', resolution: record });
+    }
+
+    // API Endpoint: Admin audit trail of every admin mutation.
+    if (pathname === '/api/admin/audit' && req.method === 'GET') {
+        if (!requireAdmin(req, res)) return;
+
+        const limit = Math.min(parseInt(parsedUrl.query.limit, 10) || 100, 500);
+        const entries = await fetchAuditLog(store, limit);
+        return sendJson(res, 200, { entries, dataSource: supabaseEnabled() ? 'SUPABASE' : 'SESSION_ONLY' });
+    }
+
+    // API Endpoint: Deeper analytics cuts for the admin Analytics tab.
+    if (pathname === '/api/admin/analytics' && req.method === 'GET') {
+        if (!requireAdmin(req, res)) return;
+
+        const events = await fetchAnalyticsEvents(store);
+        return sendJson(res, 200, {
+            ...buildAdminAnalytics(events),
+            totalEvents: events.length,
+            dataSource: supabaseEnabled() ? 'SUPABASE' : 'SESSION_ONLY'
+        });
+    }
+
+    // API Endpoint: Public health/readiness probe. Reports which optional
+    // integrations are actually wired up on this deployment.
+    if (pathname === '/api/health' && req.method === 'GET') {
+        return sendJson(res, 200, {
+            status: 'ok',
+            time: new Date().toISOString(),
+            integrations: {
+                supabase: supabaseEnabled(),
+                googleMaps: !!GOOGLE_MAPS_API_KEY,
+                openChargeMap: !!OCM_API_KEY,
+                indiaEnergyAtlas: !!ATLAS_API_KEY,
+                sessionSecret: !!process.env.SESSION_SECRET
+            }
+        });
     }
 
     // API Endpoint: Log an impact/analytics event (session start, route
@@ -1045,6 +1478,8 @@ module.exports = async (req, res) => {
     // API Endpoint: Admin impact dashboard - fleet-wide traffic diverted
     // through GridSync, with estimated kWh/CO2/revenue and a 14-day trend.
     if (pathname === '/api/analytics/summary' && req.method === 'GET') {
+        if (!requireAdmin(req, res)) return;
+
         const events = await fetchAnalyticsEvents(store);
         const summary = summarizeAnalyticsEvents(events);
 
@@ -1075,11 +1510,13 @@ module.exports = async (req, res) => {
 
     // API Endpoint: Personal impact card for one driver (Profile tab)
     if (pathname === '/api/analytics/me' && req.method === 'GET') {
-        const email = parsedUrl.query.email;
-        if (!email) {
-            res.writeHead(400, { 'Content-Type': 'application/json' });
-            return res.end(JSON.stringify({ error: 'Missing email query parameter' }));
-        }
+        const auth = requireAuth(req, res);
+        if (!auth) return;
+
+        // Always read the caller's own stats from the signed token, never from a
+        // client-supplied ?email= - otherwise any signed-in driver could read
+        // another driver's activity by changing the query string.
+        const email = auth.email;
         const events = await fetchAnalyticsEvents(store, null, email);
         const summary = summarizeAnalyticsEvents(events);
         res.writeHead(200, { 'Content-Type': 'application/json' });

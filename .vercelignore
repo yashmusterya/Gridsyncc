@@ -9,3 +9,6 @@ __MACOSX
 .env.example
 .vercel
 node_modules
+scripts
+supabase
+README.md
