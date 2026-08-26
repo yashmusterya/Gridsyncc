@@ -1,0 +1,515 @@
+[
+  {
+    "make": "Tata",
+    "model": "Tiago EV MR (19.2 kWh)",
+    "batteryCapacity": 19.2,
+    "maxRange": 250,
+    "connector": "CCS2",
+    "preferenceSpeed": "DC",
+    "modelFull": "Tata Tiago EV MR (19.2 kWh)"
+  },
+  {
+    "make": "Tata",
+    "model": "Tiago EV LR (24 kWh)",
+    "batteryCapacity": 24.0,
+    "maxRange": 315,
+    "connector": "CCS2",
+    "preferenceSpeed": "DC",
+    "modelFull": "Tata Tiago EV LR (24 kWh)"
+  },
+  {
+    "make": "Tata",
+    "model": "Punch EV MR (30 kWh)",
+    "batteryCapacity": 30.0,
+    "maxRange": 370,
+    "connector": "CCS2",
+    "preferenceSpeed": "DC",
+    "modelFull": "Tata Punch EV MR (30 kWh)"
+  },
+  {
+    "make": "Tata",
+    "model": "Punch EV LR (40 kWh)",
+    "batteryCapacity": 40.0,
+    "maxRange": 468,
+    "connector": "CCS2",
+    "preferenceSpeed": "DC",
+    "modelFull": "Tata Punch EV LR (40 kWh)"
+  },
+  {
+    "make": "Tata",
+    "model": "Nexon EV MR (30 kWh)",
+    "batteryCapacity": 30.0,
+    "maxRange": 275,
+    "connector": "CCS2",
+    "preferenceSpeed": "DC",
+    "modelFull": "Tata Nexon EV MR (30 kWh)"
+  },
+  {
+    "make": "Tata",
+    "model": "Nexon EV LR/45 (45 kWh)",
+    "batteryCapacity": 45.0,
+    "maxRange": 489,
+    "connector": "CCS2",
+    "preferenceSpeed": "DC",
+    "modelFull": "Tata Nexon EV LR/45 (45 kWh)"
+  },
+  {
+    "make": "Tata",
+    "model": "Tigor EV Ziptron (26 kWh)",
+    "batteryCapacity": 26.0,
+    "maxRange": 306,
+    "connector": "CCS2",
+    "preferenceSpeed": "DC",
+    "modelFull": "Tata Tigor EV Ziptron (26 kWh)"
+  },
+  {
+    "make": "Tata",
+    "model": "Curvv EV 55 kWh",
+    "batteryCapacity": 55.0,
+    "maxRange": 502,
+    "connector": "CCS2",
+    "preferenceSpeed": "DC",
+    "modelFull": "Tata Curvv EV 55 kWh"
+  },
+  {
+    "make": "Tata",
+    "model": "Sierra EV 63 kWh",
+    "batteryCapacity": 63.0,
+    "maxRange": 566,
+    "connector": "CCS2",
+    "preferenceSpeed": "DC",
+    "modelFull": "Tata Sierra EV 63 kWh"
+  },
+  {
+    "make": "Tata",
+    "model": "Sierra EV 75 kWh RWD",
+    "batteryCapacity": 75.0,
+    "maxRange": 665,
+    "connector": "CCS2",
+    "preferenceSpeed": "DC",
+    "modelFull": "Tata Sierra EV 75 kWh RWD"
+  },
+  {
+    "make": "Tata",
+    "model": "Harrier EV 65 kWh",
+    "batteryCapacity": 65.0,
+    "maxRange": 538,
+    "connector": "CCS2",
+    "preferenceSpeed": "DC",
+    "modelFull": "Tata Harrier EV 65 kWh"
+  },
+  {
+    "make": "Tata",
+    "model": "Harrier EV 75 kWh",
+    "batteryCapacity": 75.0,
+    "maxRange": 627,
+    "connector": "CCS2",
+    "preferenceSpeed": "DC",
+    "modelFull": "Tata Harrier EV 75 kWh"
+  },
+  {
+    "make": "MG",
+    "model": "Comet EV 17.3 kWh",
+    "batteryCapacity": 17.3,
+    "maxRange": 230,
+    "connector": "Type 2 AC",
+    "preferenceSpeed": "AC",
+    "modelFull": "MG Comet EV 17.3 kWh"
+  },
+  {
+    "make": "MG",
+    "model": "ZS EV 50.3 kWh",
+    "batteryCapacity": 50.3,
+    "maxRange": 461,
+    "connector": "CCS2",
+    "preferenceSpeed": "DC",
+    "modelFull": "MG ZS EV 50.3 kWh"
+  },
+  {
+    "make": "MG",
+    "model": "Windsor EV Standard (38 kWh)",
+    "batteryCapacity": 38.0,
+    "maxRange": 332,
+    "connector": "CCS2",
+    "preferenceSpeed": "DC",
+    "modelFull": "MG Windsor EV Standard (38 kWh)"
+  },
+  {
+    "make": "MG",
+    "model": "Windsor EV Pro/LR (52.9 kWh)",
+    "batteryCapacity": 52.9,
+    "maxRange": 449,
+    "connector": "CCS2",
+    "preferenceSpeed": "DC",
+    "modelFull": "MG Windsor EV Pro/LR (52.9 kWh)"
+  },
+  {
+    "make": "Mahindra",
+    "model": "XUV400 EV 34.5 kWh",
+    "batteryCapacity": 34.5,
+    "maxRange": 375,
+    "connector": "CCS2",
+    "preferenceSpeed": "DC",
+    "modelFull": "Mahindra XUV400 EV 34.5 kWh"
+  },
+  {
+    "make": "Mahindra",
+    "model": "XUV400 EV LR (39.4 kWh)",
+    "batteryCapacity": 39.4,
+    "maxRange": 456,
+    "connector": "CCS2",
+    "preferenceSpeed": "DC",
+    "modelFull": "Mahindra XUV400 EV LR (39.4 kWh)"
+  },
+  {
+    "make": "Mahindra",
+    "model": "XUV 3XO EV 39.4 kWh",
+    "batteryCapacity": 39.4,
+    "maxRange": 351,
+    "connector": "CCS2",
+    "preferenceSpeed": "DC",
+    "modelFull": "Mahindra XUV 3XO EV 39.4 kWh"
+  },
+  {
+    "make": "Mahindra",
+    "model": "BE 6 59 kWh",
+    "batteryCapacity": 59.0,
+    "maxRange": 556,
+    "connector": "CCS2",
+    "preferenceSpeed": "DC",
+    "modelFull": "Mahindra BE 6 59 kWh"
+  },
+  {
+    "make": "Mahindra",
+    "model": "BE 6 79 kWh",
+    "batteryCapacity": 79.0,
+    "maxRange": 682,
+    "connector": "CCS2",
+    "preferenceSpeed": "DC",
+    "modelFull": "Mahindra BE 6 79 kWh"
+  },
+  {
+    "make": "Mahindra",
+    "model": "XEV 9e 59 kWh",
+    "batteryCapacity": 59.0,
+    "maxRange": 542,
+    "connector": "CCS2",
+    "preferenceSpeed": "DC",
+    "modelFull": "Mahindra XEV 9e 59 kWh"
+  },
+  {
+    "make": "Mahindra",
+    "model": "XEV 9e 79 kWh",
+    "batteryCapacity": 79.0,
+    "maxRange": 656,
+    "connector": "CCS2",
+    "preferenceSpeed": "DC",
+    "modelFull": "Mahindra XEV 9e 79 kWh"
+  },
+  {
+    "make": "Mahindra",
+    "model": "XEV 9S 59 kWh",
+    "batteryCapacity": 59.0,
+    "maxRange": 521,
+    "connector": "CCS2",
+    "preferenceSpeed": "DC",
+    "modelFull": "Mahindra XEV 9S 59 kWh"
+  },
+  {
+    "make": "Mahindra",
+    "model": "XEV 9S 79 kWh",
+    "batteryCapacity": 79.0,
+    "maxRange": 679,
+    "connector": "CCS2",
+    "preferenceSpeed": "DC",
+    "modelFull": "Mahindra XEV 9S 79 kWh"
+  },
+  {
+    "make": "Hyundai",
+    "model": "Creta Electric 42 kWh",
+    "batteryCapacity": 42.0,
+    "maxRange": 420,
+    "connector": "CCS2",
+    "preferenceSpeed": "DC",
+    "modelFull": "Hyundai Creta Electric 42 kWh"
+  },
+  {
+    "make": "Hyundai",
+    "model": "Creta Electric 51.4 kWh LR",
+    "batteryCapacity": 51.4,
+    "maxRange": 510,
+    "connector": "CCS2",
+    "preferenceSpeed": "DC",
+    "modelFull": "Hyundai Creta Electric 51.4 kWh LR"
+  },
+  {
+    "make": "Hyundai",
+    "model": "Kona Electric 39.2 kWh",
+    "batteryCapacity": 39.2,
+    "maxRange": 452,
+    "connector": "CCS2",
+    "preferenceSpeed": "DC",
+    "modelFull": "Hyundai Kona Electric 39.2 kWh"
+  },
+  {
+    "make": "Maruti Suzuki",
+    "model": "e Vitara 49 kWh 2WD",
+    "batteryCapacity": 49.0,
+    "maxRange": 344,
+    "connector": "CCS2",
+    "preferenceSpeed": "DC",
+    "modelFull": "Maruti Suzuki e Vitara 49 kWh 2WD"
+  },
+  {
+    "make": "Maruti Suzuki",
+    "model": "e Vitara 61 kWh AWD",
+    "batteryCapacity": 61.0,
+    "maxRange": 426,
+    "connector": "CCS2",
+    "preferenceSpeed": "DC",
+    "modelFull": "Maruti Suzuki e Vitara 61 kWh AWD"
+  },
+  {
+    "make": "Kia",
+    "model": "EV6 84 kWh",
+    "batteryCapacity": 84.0,
+    "maxRange": 650,
+    "connector": "CCS2",
+    "preferenceSpeed": "DC",
+    "modelFull": "Kia EV6 84 kWh"
+  },
+  {
+    "make": "Kia",
+    "model": "Syros EV 42 kWh",
+    "batteryCapacity": 42.0,
+    "maxRange": 443,
+    "connector": "CCS2",
+    "preferenceSpeed": "DC",
+    "modelFull": "Kia Syros EV 42 kWh"
+  },
+  {
+    "make": "Kia",
+    "model": "Syros EV 51.4 kWh Extended Range",
+    "batteryCapacity": 51.4,
+    "maxRange": 526,
+    "connector": "CCS2",
+    "preferenceSpeed": "DC",
+    "modelFull": "Kia Syros EV 51.4 kWh Extended Range"
+  },
+  {
+    "make": "Kia",
+    "model": "Carens Clavis EV 42 kWh",
+    "batteryCapacity": 42.0,
+    "maxRange": 404,
+    "connector": "CCS2",
+    "preferenceSpeed": "DC",
+    "modelFull": "Kia Carens Clavis EV 42 kWh"
+  },
+  {
+    "make": "Kia",
+    "model": "Carens Clavis EV 51.4 kWh",
+    "batteryCapacity": 51.4,
+    "maxRange": 490,
+    "connector": "CCS2",
+    "preferenceSpeed": "DC",
+    "modelFull": "Kia Carens Clavis EV 51.4 kWh"
+  },
+  {
+    "make": "BYD",
+    "model": "Atto 3 49.92 kWh",
+    "batteryCapacity": 49.92,
+    "maxRange": 410,
+    "connector": "CCS2",
+    "preferenceSpeed": "DC",
+    "modelFull": "BYD Atto 3 49.92 kWh"
+  },
+  {
+    "make": "BYD",
+    "model": "Atto 3 60.48 kWh",
+    "batteryCapacity": 60.48,
+    "maxRange": 521,
+    "connector": "CCS2",
+    "preferenceSpeed": "DC",
+    "modelFull": "BYD Atto 3 60.48 kWh"
+  },
+  {
+    "make": "BYD",
+    "model": "Seal 61.44 kWh",
+    "batteryCapacity": 61.44,
+    "maxRange": 510,
+    "connector": "CCS2",
+    "preferenceSpeed": "DC",
+    "modelFull": "BYD Seal 61.44 kWh"
+  },
+  {
+    "make": "BYD",
+    "model": "Seal 82.56 kWh",
+    "batteryCapacity": 82.56,
+    "maxRange": 650,
+    "connector": "CCS2",
+    "preferenceSpeed": "DC",
+    "modelFull": "BYD Seal 82.56 kWh"
+  },
+  {
+    "make": "BYD",
+    "model": "Sealion 7 71.8 kWh",
+    "batteryCapacity": 71.8,
+    "maxRange": 520,
+    "connector": "CCS2",
+    "preferenceSpeed": "DC",
+    "modelFull": "BYD Sealion 7 71.8 kWh"
+  },
+  {
+    "make": "BYD",
+    "model": "Sealion 7 82.56 kWh",
+    "batteryCapacity": 82.56,
+    "maxRange": 567,
+    "connector": "CCS2",
+    "preferenceSpeed": "DC",
+    "modelFull": "BYD Sealion 7 82.56 kWh"
+  },
+  {
+    "make": "BYD",
+    "model": "e6 71.7 kWh",
+    "batteryCapacity": 71.7,
+    "maxRange": 415,
+    "connector": "CCS2",
+    "preferenceSpeed": "DC",
+    "modelFull": "BYD e6 71.7 kWh"
+  },
+  {
+    "make": "VinFast",
+    "model": "VF6 59.6 kWh",
+    "batteryCapacity": 59.6,
+    "maxRange": 463,
+    "connector": "CCS2",
+    "preferenceSpeed": "DC",
+    "modelFull": "VinFast VF6 59.6 kWh"
+  },
+  {
+    "make": "VinFast",
+    "model": "VF7 75.3 kWh",
+    "batteryCapacity": 75.3,
+    "maxRange": 532,
+    "connector": "CCS2",
+    "preferenceSpeed": "DC",
+    "modelFull": "VinFast VF7 75.3 kWh"
+  },
+  {
+    "make": "Toyota",
+    "model": "Urban Cruiser Ebella 49 kWh",
+    "batteryCapacity": 49.0,
+    "maxRange": 440,
+    "connector": "CCS2",
+    "preferenceSpeed": "DC",
+    "modelFull": "Toyota Urban Cruiser Ebella 49 kWh"
+  },
+  {
+    "make": "Toyota",
+    "model": "Urban Cruiser Ebella 61 kWh",
+    "batteryCapacity": 61.0,
+    "maxRange": 543,
+    "connector": "CCS2",
+    "preferenceSpeed": "DC",
+    "modelFull": "Toyota Urban Cruiser Ebella 61 kWh"
+  },
+  {
+    "make": "Vayve Mobility",
+    "model": "Eva 18 kWh",
+    "batteryCapacity": 18.0,
+    "maxRange": 250,
+    "connector": "CCS2",
+    "preferenceSpeed": "DC",
+    "modelFull": "Vayve Mobility Eva 18 kWh"
+  },
+  {
+    "make": "BMW",
+    "model": "iX1 LWB 66.4 kWh",
+    "batteryCapacity": 66.4,
+    "maxRange": 531,
+    "connector": "CCS2",
+    "preferenceSpeed": "DC",
+    "modelFull": "BMW iX1 LWB 66.4 kWh"
+  },
+  {
+    "make": "Volvo",
+    "model": "XC40 Recharge / EX40 75 kWh",
+    "batteryCapacity": 75.0,
+    "maxRange": 418,
+    "connector": "CCS2",
+    "preferenceSpeed": "DC",
+    "modelFull": "Volvo XC40 Recharge / EX40 75 kWh"
+  },
+  {
+    "make": "Mercedes-Benz",
+    "model": "EQB 68 kWh",
+    "batteryCapacity": 68.0,
+    "maxRange": 350,
+    "connector": "CCS2",
+    "preferenceSpeed": "DC",
+    "modelFull": "Mercedes-Benz EQB 68 kWh"
+  },
+  {
+    "make": "Mercedes-Benz",
+    "model": "EQE SUV 90.56 kWh",
+    "batteryCapacity": 90.56,
+    "maxRange": 480,
+    "connector": "CCS2",
+    "preferenceSpeed": "DC",
+    "modelFull": "Mercedes-Benz EQE SUV 90.56 kWh"
+  },
+  {
+    "make": "Audi",
+    "model": "Q8 e-tron 95 kWh",
+    "batteryCapacity": 95.0,
+    "maxRange": 491,
+    "connector": "CCS2",
+    "preferenceSpeed": "DC",
+    "modelFull": "Audi Q8 e-tron 95 kWh"
+  },
+  {
+    "make": "Audi",
+    "model": "Q8 e-tron 106 kWh",
+    "batteryCapacity": 106.0,
+    "maxRange": 582,
+    "connector": "CCS2",
+    "preferenceSpeed": "DC",
+    "modelFull": "Audi Q8 e-tron 106 kWh"
+  },
+  {
+    "make": "Jaguar",
+    "model": "I-Pace 90 kWh",
+    "batteryCapacity": 90.0,
+    "maxRange": 410,
+    "connector": "CCS2",
+    "preferenceSpeed": "DC",
+    "modelFull": "Jaguar I-Pace 90 kWh"
+  },
+  {
+    "make": "Mahindra",
+    "model": "e-Verito 21.2 kWh",
+    "batteryCapacity": 21.2,
+    "maxRange": 140,
+    "connector": "Type 2 AC",
+    "preferenceSpeed": "AC",
+    "modelFull": "Mahindra e-Verito 21.2 kWh"
+  },
+  {
+    "make": "Mahindra",
+    "model": "e2o Plus 15 kWh",
+    "batteryCapacity": 15.0,
+    "maxRange": 110,
+    "connector": "Type 2 AC",
+    "preferenceSpeed": "AC",
+    "modelFull": "Mahindra e2o Plus 15 kWh"
+  },
+  {
+    "make": "Mahindra",
+    "model": "e2o 10 kWh",
+    "batteryCapacity": 10.0,
+    "maxRange": 80,
+    "connector": "Type 2 AC",
+    "preferenceSpeed": "AC",
+    "modelFull": "Mahindra e2o 10 kWh"
+  }
+]

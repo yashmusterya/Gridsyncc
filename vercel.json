@@ -1,0 +1,10 @@
+{
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": "/api/handler" }
+  ],
+  "functions": {
+    "api/handler.js": {
+      "maxDuration": 20
+    }
+  }
+}

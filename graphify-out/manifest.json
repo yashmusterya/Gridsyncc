@@ -1,0 +1,80 @@
+{
+  ".claude/launch.json": {
+    "mtime": 1787762091.026338,
+    "seen": 1787763682.7743533,
+    "ast_hash": "a55770b9dae43a9a087ac9f737298722",
+    "semantic_hash": "a55770b9dae43a9a087ac9f737298722"
+  },
+  ".claude/settings.json": {
+    "mtime": 1787758913.974146,
+    "seen": 1787763682.7743533,
+    "ast_hash": "d909173b64a3a7973a4c567c79338a15",
+    "semantic_hash": "d909173b64a3a7973a4c567c79338a15"
+  },
+  "api/handler.js": {
+    "mtime": 1787762727.8776822,
+    "seen": 1787763682.7743533,
+    "ast_hash": "195ce95ed585b63d61fc79f19e34bafb",
+    "semantic_hash": "195ce95ed585b63d61fc79f19e34bafb"
+  },
+  "ev_models.json": {
+    "mtime": 1787760706.9950898,
+    "seen": 1787763682.7743533,
+    "ast_hash": "61fffc36ce6891e47f73a737c43acaca",
+    "semantic_hash": "61fffc36ce6891e47f73a737c43acaca"
+  },
+  "lib/auth.js": {
+    "mtime": 1787760300.5161176,
+    "seen": 1787763682.7743533,
+    "ast_hash": "e31dd37f7698194e83842d2dfd556059",
+    "semantic_hash": "e31dd37f7698194e83842d2dfd556059"
+  },
+  "lib/store.js": {
+    "mtime": 1787762542.7038417,
+    "seen": 1787763682.7743533,
+    "ast_hash": "d6bfe4d3e489e1394e79dc0aad22d94a",
+    "semantic_hash": "d6bfe4d3e489e1394e79dc0aad22d94a"
+  },
+  "package.json": {
+    "mtime": 1787762064.118939,
+    "seen": 1787763682.7743533,
+    "ast_hash": "a3bcafc39c9d6a651deac73832a5ae9d",
+    "semantic_hash": "a3bcafc39c9d6a651deac73832a5ae9d"
+  },
+  "script.js": {
+    "mtime": 1787761144.577482,
+    "seen": 1787763682.7743533,
+    "ast_hash": "85eef8a0e526f4a6ade69f3941cd1d1b",
+    "semantic_hash": "85eef8a0e526f4a6ade69f3941cd1d1b"
+  },
+  "scripts/seed-supabase.js": {
+    "mtime": 1787760322.5823283,
+    "seen": 1787763682.7743533,
+    "ast_hash": "6cebd310018707eb6543220e72cff58b",
+    "semantic_hash": "6cebd310018707eb6543220e72cff58b"
+  },
+  "supabase/schema.sql": {
+    "mtime": 1787760970.568706,
+    "seen": 1787763682.7743533,
+    "ast_hash": "c1217fdec7f339b871ea30325a348561",
+    "semantic_hash": "c1217fdec7f339b871ea30325a348561"
+  },
+  "vahan_registry.json": {
+    "mtime": 1787757871.0973341,
+    "seen": 1787763682.7743533,
+    "ast_hash": "bb6e501ea6f64cdc618561ba4b7f4562",
+    "semantic_hash": "bb6e501ea6f64cdc618561ba4b7f4562"
+  },
+  "vercel.json": {
+    "mtime": 1787759733.6963794,
+    "seen": 1787763682.7743533,
+    "ast_hash": "71f17b92eef1b2aa7bdc9f04b8290e9f",
+    "semantic_hash": "71f17b92eef1b2aa7bdc9f04b8290e9f"
+  },
+  "index.html": {
+    "mtime": 1787761875.597599,
+    "seen": 1787763682.7743533,
+    "ast_hash": "e95522360b2ea10b4fe832e6759e7a08",
+    "semantic_hash": "e95522360b2ea10b4fe832e6759e7a08"
+  }
+}

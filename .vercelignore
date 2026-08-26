@@ -1,0 +1,11 @@
+.claude
+CLAUDE.md
+graphify-out
+__MACOSX
+.git
+.gitignore
+.env
+.env.local
+.env.example
+.vercel
+node_modules

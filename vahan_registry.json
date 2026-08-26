@@ -1,0 +1,82 @@
+[
+    {
+        "registrationNo": "MH12EV4321",
+        "ownerName": "Vini Patel",
+        "make": "TATA MOTORS",
+        "model": "Tata Nexon EV Max",
+        "fuelType": "ELECTRIC",
+        "regDate": "2024-02-15"
+    },
+    {
+        "registrationNo": "MH14EV1234",
+        "ownerName": "Ramesh Sharma",
+        "make": "TATA MOTORS",
+        "model": "Tata Punch EV Long Range",
+        "fuelType": "ELECTRIC",
+        "regDate": "2024-05-20"
+    },
+    {
+        "registrationNo": "DL3CEV7777",
+        "ownerName": "Amit Verma",
+        "make": "HYUNDAI MOTOR",
+        "model": "Hyundai Ioniq 5",
+        "fuelType": "ELECTRIC",
+        "regDate": "2023-11-05"
+    },
+    {
+        "registrationNo": "KA03EV5555",
+        "ownerName": "Suresh Kumar",
+        "make": "MG MOTOR",
+        "model": "MG ZS EV",
+        "fuelType": "ELECTRIC",
+        "regDate": "2023-08-15"
+    },
+    {
+        "registrationNo": "GJ01EV2222",
+        "ownerName": "Hardik Patel",
+        "make": "BYD AUTO",
+        "model": "BYD Atto 3",
+        "fuelType": "ELECTRIC",
+        "regDate": "2024-01-10"
+    },
+    {
+        "registrationNo": "MH12UR8888",
+        "ownerName": "Ananya Sen",
+        "make": "TATA MOTORS",
+        "model": "Tata Nexon EV Max",
+        "fuelType": "ELECTRIC",
+        "regDate": "2024-03-12"
+    },
+    {
+        "registrationNo": "MH12AB1234",
+        "ownerName": "Rajesh Deshmukh",
+        "make": "MAHINDRA & MAHINDRA",
+        "model": "Mahindra XUV400",
+        "fuelType": "ELECTRIC",
+        "regDate": "2023-09-18"
+    },
+    {
+        "registrationNo": "KA51EV9999",
+        "ownerName": "Vikram Hegde",
+        "make": "KIA MOTORS",
+        "model": "Kia EV6 GT-Line",
+        "fuelType": "ELECTRIC",
+        "regDate": "2023-07-22"
+    },
+    {
+        "registrationNo": "DL1CEV0001",
+        "ownerName": "Priyanka Gandhi",
+        "make": "TATA MOTORS",
+        "model": "Tata Tiago EV Medium Range",
+        "fuelType": "ELECTRIC",
+        "regDate": "2024-04-01"
+    },
+    {
+        "registrationNo": "MH02EV8888",
+        "ownerName": "Karan Johar",
+        "make": "TESLA",
+        "model": "Tesla Model 3 Long Range",
+        "fuelType": "ELECTRIC",
+        "regDate": "2024-06-11"
+    }
+]

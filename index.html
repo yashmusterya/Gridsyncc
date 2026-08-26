@@ -1,0 +1,892 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>GridSync — Unified Live EV Charger Map</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet" />
+    <link rel="stylesheet" href="style.css">
+    <!-- Google Maps JS API with Places and Geometry libraries: key is fetched
+         from /api/config (server env var) instead of being hardcoded here -->
+    <script>
+        (function () {
+            fetch('/api/config')
+                .then(function (r) { return r.json(); })
+                .then(function (cfg) {
+                    if (!cfg.googleMapsApiKey) {
+                        console.error('Google Maps API key is not configured on the server (GOOGLE_MAPS_API_KEY).');
+                        return;
+                    }
+                    var s = document.createElement('script');
+                    s.src = 'https://maps.googleapis.com/maps/api/js?key=' + encodeURIComponent(cfg.googleMapsApiKey) + '&libraries=places,geometry';
+                    document.head.appendChild(s);
+                })
+                .catch(function (err) { console.error('Failed to load map configuration:', err); });
+        })();
+    </script>
+    <!-- Chart.js for Admin Analytics -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
+    <script src="script.js" defer></script>
+</head>
+<body class="dark-theme">
+
+    <!-- Loading Overlay -->
+    <div id="status-overlay" class="hidden">
+        <div id="status-message">Loading EV chargers...</div>
+    </div>
+
+    <!-- ==================== LOGIN SCREEN ==================== -->
+    <section id="login-screen" class="full-screen-overlay light-theme">
+        <div class="login-card">
+            <!-- Circular green car header as per Roxio reference -->
+            <div class="login-car-header">
+                <div class="car-circle">
+                    <svg viewBox="0 0 100 100" width="120" height="120" class="top-car-svg">
+                        <!-- Shadow -->
+                        <rect x="36" y="16" width="28" height="68" rx="14" fill="rgba(0,0,0,0.1)"></rect>
+                        <!-- Car Body (Green) -->
+                        <rect x="35" y="15" width="30" height="70" rx="15" fill="#10b981"></rect>
+                        <!-- Windshield Front -->
+                        <path d="M 38 32 Q 50 26 62 32 Q 56 36 44 36 Z" fill="#1e293b"></path>
+                        <!-- Windshield Rear -->
+                        <path d="M 38 68 Q 50 72 62 68 Q 56 64 44 64 Z" fill="#1e293b"></path>
+                        <!-- Side Mirrors -->
+                        <rect x="31" y="34" width="4" height="8" rx="2" fill="#10b981"></rect>
+                        <!-- Wheels -->
+                        <rect x="32" y="22" width="3" height="8" rx="1" fill="#0f172a"></rect>
+                        <rect x="65" y="22" width="3" height="8" rx="1" fill="#0f172a"></rect>
+                        <rect x="32" y="60" width="3" height="8" rx="1" fill="#0f172a"></rect>
+                        <rect x="65" y="60" width="3" height="8" rx="1" fill="#0f172a"></rect>
+                        <!-- Charger Lightning Bolt logo on hood -->
+                        <path d="M 50 42 L 46 50 L 49 50 L 48 56 L 54 48 L 50 48 Z" fill="#ffffff"></path>
+                    </svg>
+                </div>
+            </div>
+
+            <div class="login-header">
+                <h1>Welcome to <strong>GridSync</strong></h1>
+                <p>Unified Live EV Trip Planner</p>
+            </div>
+            
+            <div class="login-tabs">
+                <button id="tab-login-user" class="login-tab active" onclick="switchLoginRole('User')">User Login</button>
+                <button id="tab-login-admin" class="login-tab" onclick="switchLoginRole('Admin')">Admin Portal</button>
+            </div>
+
+            <form id="login-form" onsubmit="handleAuthLogin(event)">
+                <div class="form-group">
+                    <label for="login-email">EMAIL OR MOBILE</label>
+                    <input type="text" id="login-email" required placeholder="e.g. user@gridsync.in">
+                </div>
+                <div class="form-group">
+                    <label for="login-password">PASSWORD</label>
+                    <input type="password" id="login-password" required placeholder="••••••••">
+                </div>
+                
+                <div class="form-actions-row">
+                    <a href="#" class="forgot-pass-link" onclick="alert('Demo: Use user@gridsync.in / user123 or admin@gridsync.in / admin123')">Forgot Password?</a>
+                </div>
+
+                <button type="submit" class="btn-login">LOGIN</button>
+            </form>
+
+            <!-- Sign in with Google Button (Auth Simulation trigger) -->
+            <button class="btn-google-auth" onclick="triggerGoogleAuthLogin()">
+                <svg viewBox="0 0 24 24" width="18" height="18" class="google-logo">
+                    <path fill="#ea4335" d="M12.24 10.285V14.4h6.887c-.648 2.41-2.519 4.2-5.135 4.2-3.482 0-6.31-2.828-6.31-6.31s2.828-6.31 6.31-6.31c1.583 0 3.027.585 4.135 1.551l3.056-3.056C19.123 2.502 15.892 1.5 12.24 1.5 6.033 1.5 1 6.533 1 12.74s5.033 11.24 11.24 11.24c6.126 0 10.967-4.305 10.967-11.24 0-.663-.06-1.302-.177-1.955H12.24z"/>
+                </svg>
+                <span>Sign in with Google</span>
+            </button>
+
+            <div class="login-footer">
+                <p>Don't have an account? <a href="#" onclick="showRegisterModal()">Create account</a></p>
+            </div>
+            
+            <div class="credentials-badge">
+                <p><strong>Demo Logins:</strong></p>
+                <p>User: <code>user@gridsync.in</code> / <code>user123</code></p>
+                <p>Admin: <code>admin@gridsync.in</code> / <code>admin123</code></p>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==================== GOOGLE AUTH SIMULATION OVERLAY ==================== -->
+    <div id="google-auth-overlay" class="modal-overlay hidden">
+        <div class="google-auth-card">
+            <div class="g-logo-spinner">
+                <svg viewBox="0 0 24 24" width="48" height="48" class="google-spinner-logo">
+                    <path fill="#ea4335" d="M12.24 10.285V14.4h6.887c-.648 2.41-2.519 4.2-5.135 4.2-3.482 0-6.31-2.828-6.31-6.31s2.828-6.31 6.31-6.31c1.583 0 3.027.585 4.135 1.551l3.056-3.056C19.123 2.502 15.892 1.5 12.24 1.5 6.033 1.5 1 6.533 1 12.74s5.033 11.24 11.24 11.24c6.126 0 10.967-4.305 10.967-11.24 0-.663-.06-1.302-.177-1.955H12.24z"/>
+                </svg>
+                <div class="spinner-circle"></div>
+            </div>
+            <h3 style="color: #ffffff;">Verifying with Google Accounts...</h3>
+            <p id="g-auth-status">Connecting to secure Google OAuth service...</p>
+        </div>
+    </div>
+
+    <!-- ==================== VEHICLE PROFILE SETUP MODAL ==================== -->
+    <div id="vehicle-setup-modal" class="modal-overlay hidden">
+        <div class="modal-card vehicle-setup-card">
+            <div class="setup-icon-circle">
+                <svg viewBox="0 0 24 24" width="36" height="36" fill="#10b981">
+                    <path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5H6.5c-.66 0-1.21.42-1.42.99L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 6h11c.28 0 .53.18.62.44L19.5 11H4.5l1.38-4.56c.09-.26.34-.44.62-.44zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/>
+                </svg>
+            </div>
+            <h3>Configure EV Profile</h3>
+            <p class="setup-subtitle">Provide your vehicle model and registration number to load your specs and enable planner calculations.</p>
+            
+            <form onsubmit="handleSaveVehicleProfile(event)">
+                <div class="form-group">
+                    <label for="setup-vehicle-make">CAR COMPANY</label>
+                    <select id="setup-vehicle-make" required onchange="handleSetupMakeChange()" style="width: 100%; background: #0f172a; color: #ffffff; border: 1px solid #334155; border-radius: 24px; padding: 12px 18px; font-size: 0.85rem; outline: none; cursor: pointer; font-family: var(--font-sans);">
+                        <option value="">Select Car Company</option>
+                        <!-- Populated dynamically from ev_models.json -->
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="setup-vehicle-model">MODEL TYPE</label>
+                    <select id="setup-vehicle-model" required disabled onchange="handleSetupModelChange()" style="width: 100%; background: #0f172a; color: #ffffff; border: 1px solid #334155; border-radius: 24px; padding: 12px 18px; font-size: 0.85rem; outline: none; cursor: pointer; font-family: var(--font-sans);">
+                        <option value="">Select company first</option>
+                        <!-- Populated dynamically once a company is chosen -->
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="setup-vehicle-no">VEHICLE NUMBER</label>
+                    <input type="text" id="setup-vehicle-no" required placeholder="e.g. MH12EV4321" style="width: 100%; background: #0f172a; color: #ffffff; border: 1px solid #334155; border-radius: 24px; padding: 12px 18px; font-size: 0.85rem; outline: none; font-family: var(--font-sans); text-transform: uppercase;">
+                </div>
+
+                <!-- EPA/Registry Verification Info Badge -->
+                <div id="epa-verification-badge" class="vahan-badge hidden" style="width: 100%; background: #0f172a; border: 1px solid #334155; border-radius: 16px; padding: 12px; margin-top: 14px; text-align: left; font-size: 0.75rem;">
+                    <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 8px;">
+                        <span class="material-symbols-outlined" style="color: #10b981; font-size: 1.1rem;">check_circle</span>
+                        <strong style="color: #10b981; font-size: 0.7rem; letter-spacing: 0.05em;">EV SPECIFICATIONS LOADED</strong>
+                    </div>
+                    <div class="vahan-row" style="color: #cbd5e1;"><strong>Model:</strong> <span id="epa-model">--</span></div>
+                </div>
+                
+                <!-- Specs autofill preview badge -->
+                <div class="specs-preview-badge hidden" id="setup-specs-preview" style="margin-top: 10px;">
+                    <div class="preview-metric"><span>🔋 Battery:</span> <strong id="preview-battery">-- kWh</strong></div>
+                    <div class="preview-metric"><span>🛣— Max Range:</span> <strong id="preview-range">-- km</strong></div>
+                    <div class="preview-metric"><span>🔌 Connector:</span> <strong id="preview-plug">--</strong></div>
+                </div>
+
+                <div class="modal-actions full-width" style="margin-top: 20px;">
+                    <button type="submit" id="btn-save-setup" class="btn-primary-pill" style="cursor: pointer;">SAVE EV PROFILE</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ==================== REGISTRATION MODAL ==================== -->
+    <div id="register-modal" class="modal-overlay hidden">
+        <div class="modal-card">
+            <h3>Create GridSync Account</h3>
+            <form onsubmit="handleAuthRegister(event)">
+                <div class="form-group">
+                    <label>Full Name</label>
+                    <input type="text" id="reg-name" required placeholder="e.g. Vini Patel">
+                </div>
+                <div class="form-group">
+                    <label>Email Address</label>
+                    <input type="email" id="reg-email" required placeholder="e.g. user@gridsync.in">
+                </div>
+                <div class="form-group">
+                    <label>Mobile Number</label>
+                    <input type="text" id="reg-phone" required placeholder="e.g. +91 98765 43210">
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" id="reg-password" required placeholder="••••••••">
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn-secondary" onclick="hideRegisterModal()">Cancel</button>
+                    <button type="submit" class="btn-primary">Register</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ==================== USER MAIN INTERFACE ==================== -->
+    <main id="user-app-shell" class="app-shell hidden">
+        
+        <!-- Persistent Background Map Layer -->
+        <div id="map-container">
+            <div id="map"></div>
+
+            <!-- Floating Map Floating Badges & Controls Overlay (Active on Home View) -->
+            <div id="map-floating-overlay" class="map-floating-overlay">
+                <!-- Live Network Status Pill -->
+                <div class="live-network-pill">
+                    <span class="live-pulse-dot"></span>
+                    <span>LIVE NETWORK</span>
+                </div>
+
+                <!-- Floating Map Action Buttons (Locate GPS & Zoom Controls) -->
+                <div class="map-actions-group">
+                    <button id="btn-map-locate" class="btn-map-action" title="Center to My Location" onclick="centerMapOnUser()">
+                        <span class="material-symbols-outlined">my_location</span>
+                    </button>
+                    <div class="map-zoom-group">
+                        <button id="btn-map-zoom-in" class="btn-map-action zoom-btn" title="Zoom In" onclick="zoomMap(1)">
+                            <span class="material-symbols-outlined">add</span>
+                        </button>
+                        <button id="btn-map-zoom-out" class="btn-map-action zoom-btn" title="Zoom Out" onclick="zoomMap(-1)">
+                            <span class="material-symbols-outlined">remove</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Floating Search & Filter Bar (Home View) -->
+        <div id="filter-bar" class="user-search-header">
+            <div class="search-input-pill">
+                <span class="material-symbols-outlined search-icon" onclick="syncSearchDestination(document.getElementById('home-search-dest').value)">search</span>
+                <input type="text" id="home-search-dest" placeholder="Where do you want to go?" onkeypress="if(event.key==='Enter') syncSearchDestination(this.value)">
+                <button class="btn-search-action" onclick="toggleMapLegend()" title="Toggle Map Legend">
+                    <span class="material-symbols-outlined">tune</span>
+                </button>
+            </div>
+            
+            <!-- Filter Pills (AC, DC Fast, 24/7, Active) -->
+            <div class="filter-pills-row" id="type-filter-group">
+                <button class="pill-filter" id="filter-pill-ac" data-type="AC" onclick="toggleFilterPill('AC')">AC</button>
+                <button class="pill-filter" id="filter-pill-dc" data-type="DC" onclick="toggleFilterPill('DC')">DC Fast</button>
+                <button class="pill-filter" id="filter-pill-247" data-type="247" onclick="toggleFilterPill('247')">24/7</button>
+                <button class="pill-filter" id="filter-pill-active" data-type="active" onclick="toggleFilterPill('active')">Available Now</button>
+            </div>
+        </div>
+
+        <!-- Collapsible Map Legend (Floating card) -->
+        <div id="legend-card" class="card collapsible collapsed">
+            <div id="legend-header" class="collapsible-header" onclick="toggleMapLegend()">
+                <h3>Map Legend</h3>
+                <span class="chevron">&#9662;</span>
+            </div>
+            <div id="legend-content" class="collapsible-content">
+                <div class="legend-group">
+                    <h4>Markers</h4>
+                    <div class="legend-item"><span class="legend-dot user-dot"></span> Current Position</div>
+                    <div class="legend-item"><span class="legend-dot dest-dot"></span> Destination</div>
+                    <div class="legend-item"><span class="legend-dot active-dot"></span> Active / Available</div>
+                    <div class="legend-item"><span class="legend-dot busy-dot"></span> Busy (In Use)</div>
+                    <div class="legend-item"><span class="legend-dot offline-dot"></span> Offline / Unavailable</div>
+                    <div class="legend-item"><span class="legend-dot unknown-dot"></span> Unknown Status</div>
+                    <div class="legend-item"><span class="legend-star">&#9733;</span> Recommended Charger</div>
+                </div>
+                <div class="legend-group">
+                    <h4>Grid Load</h4>
+                    <div class="legend-item"><span class="grid-badge grid-low">LOW</span> Low Load</div>
+                    <div class="legend-item"><span class="grid-badge grid-medium">MED</span> Medium Load</div>
+                    <div class="legend-item"><span class="grid-badge grid-high">HIGH</span> High Load</div>
+                    <div class="legend-item"><span class="grid-badge grid-critical">CRIT</span> Critical Load</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== USER SCREEN TABS ==================== -->
+        
+        <!-- 1. HOME TAB (LIVE MAP DETAILS BOTTOM SHEET / FLOATING CARD) -->
+        <div id="panel-home" class="tab-panel active">
+            <!-- Minimized Station Details Sheet: Slides up from bottom on mobile, floating card on desktop -->
+            <div id="bottom-sheet" class="bottom-sheet-panel hidden">
+                <div class="sheet-drag-handle" onclick="toggleBottomSheetHeight()"></div>
+                <div class="sheet-content" id="bottom-sheet-content">
+                    <!-- Loaded dynamically via script.js -->
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. TRIP PLANNER TAB -->
+        <div id="panel-plan" class="tab-panel">
+            <div class="planner-screen-container">
+                
+                <!-- App Brand Header in Planner -->
+                <header class="planner-top-header">
+                    <div class="planner-brand">
+                        <span class="brand-title">GridSync</span>
+                    </div>
+                    <div class="planner-header-icons">
+                        <button class="icon-btn-header" title="Smart Grid Optimizer" onclick="showToastNotification('⚡ GridSync Smart Optimizer Active')">
+                            <span class="material-symbols-outlined" style="color: #10b981;">bolt</span>
+                        </button>
+                        <button class="icon-btn-header" title="Alerts & Notifications" onclick="showToastNotification('🔔 0 Unread Notifications')">
+                            <span class="material-symbols-outlined">notifications</span>
+                        </button>
+                    </div>
+                </header>
+
+                <!-- Card 1: Plan Your Route -->
+                <div class="planner-card">
+                    <div class="planner-card-title">Plan Your Route</div>
+                    <div class="route-inputs-timeline">
+                        <div class="timeline-indicators">
+                            <span class="timeline-dot origin-dot"></span>
+                            <span class="timeline-line"></span>
+                            <span class="timeline-dot dest-dot"></span>
+                        </div>
+                        <div class="timeline-fields">
+                            <div class="input-route-row">
+                                <input type="text" id="input-start" value="Current Location" placeholder="Current Location or GPS">
+                                <button id="btn-use-current" class="btn-route-action" type="button" title="Use current GPS" onclick="fillGPSLocation()">
+                                    <span class="material-symbols-outlined">my_location</span>
+                                </button>
+                            </div>
+                            <div class="input-route-row">
+                                <input type="text" id="input-destination" value="Lonavala" placeholder="Destination (e.g. Mumbai, Pune, Goa)">
+                                <button class="btn-route-action" type="button" title="Search Destination" onclick="planTrip()">
+                                    <span class="material-symbols-outlined">search</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card 2: Vehicle Settings -->
+                <div class="planner-card">
+                    <div class="card-header-flex">
+                        <span class="planner-card-title">Vehicle Settings</span>
+                        <button class="btn-gear-icon" onclick="openVehicleSetupModal()" title="Configure EV Profile">
+                            <span class="material-symbols-outlined">settings</span>
+                        </button>
+                    </div>
+
+                    <!-- Selected Vehicle Model Chip -->
+                    <div class="vehicle-model-badge" onclick="openVehicleSetupModal()">
+                        <div class="vehicle-car-icon-box">
+                            <span class="material-symbols-outlined">directions_car</span>
+                        </div>
+                        <div class="vehicle-model-info">
+                            <strong id="planner-vehicle-name">Nexon EV</strong>
+                            <span>Default Vehicle</span>
+                        </div>
+                    </div>
+
+                    <!-- Battery & Est. Range Metrics Row -->
+                    <div class="vehicle-metrics-grid">
+                        <div class="metric-box">
+                            <span class="metric-box-label">Battery</span>
+                            <div class="metric-box-val-row">
+                                <span class="metric-val-large" id="battery-value">65</span>
+                                <span class="metric-val-unit">%</span>
+                            </div>
+                            <input type="range" id="input-battery" min="5" max="100" value="65" class="slider-green-mini" oninput="updateBatterySOC(this.value)">
+                        </div>
+                        <div class="metric-box">
+                            <span class="metric-box-label">Est. Range</span>
+                            <div class="metric-box-val-row">
+                                <span class="metric-val-large" id="range-calc-value">312</span>
+                                <span class="metric-val-unit">km</span>
+                            </div>
+                            <input type="number" id="input-range" value="312" min="50" max="800" class="input-range-hidden" onchange="updateEstRange(this.value)">
+                        </div>
+                    </div>
+
+                    <!-- Min Reserve at Destination Slider -->
+                    <div class="reserve-slider-section">
+                        <div class="reserve-label-row">
+                            <span>Min Reserve at Destination</span>
+                            <strong id="reserve-display-val">20%</strong>
+                        </div>
+                        <div class="slider-gauge-track">
+                            <input type="range" id="input-reserve" min="5" max="30" value="20" class="slider-gradient" oninput="updateReserveVal(this.value)">
+                        </div>
+                    </div>
+
+                    <div style="display: none;">
+                        <select id="input-preference">
+                            <option value="any" selected>Any Charger</option>
+                            <option value="AC">AC Only</option>
+                            <option value="DC">DC Fast Only</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Primary Action Button: Plan Route -->
+                <button id="plan-btn" class="btn-plan-route-primary" onclick="planTrip()">
+                    <span class="material-symbols-outlined">alt_route</span>
+                    <span>Plan Route</span>
+                </button>
+
+                <!-- Card 3: Route Overview & Summary Bar (Visible after planning) -->
+                <div id="route-summary-card" class="planner-card route-summary-preview hidden">
+                    <div class="route-stats-bar">
+                        <div class="stat-pill">
+                            <span class="material-symbols-outlined">schedule</span>
+                            <span id="route-time-val">2h 15m</span>
+                        </div>
+                        <div class="stat-pill">
+                            <span class="material-symbols-outlined">alt_route</span>
+                            <span id="route-dist-val">142 km</span>
+                        </div>
+                        <div class="stat-pill">
+                            <span class="material-symbols-outlined">ev_station</span>
+                            <span id="route-stops-val">1 Stop</span>
+                        </div>
+                        <div class="stat-pill" title="Estimated time of arrival at final destination">
+                            <span class="material-symbols-outlined" style="color: #38bdf8;">sports_score</span>
+                            <span id="route-dest-eta-val">ETA --:--</span>
+                        </div>
+                    </div>
+                    <button id="sim-btn" class="btn-sim-drive" onclick="toggleSimulator()" title="Simulate driving along route">
+                        <span id="sim-icon" class="material-symbols-outlined">play_arrow</span>
+                        <span>Simulate Drive</span>
+                    </button>
+                </div>
+
+                <!-- Card 4: Recommended Stop Card (When charging needed) -->
+                <div id="route-recommendation-panel" class="planner-card recommended-stop-card hidden">
+                    <div id="assistant-content">
+                        <!-- Loaded dynamically via script.js -->
+                    </div>
+                </div>
+
+                <!-- Card 5: List of Chargers along route -->
+                <div id="route-chargers-container" class="planner-card scrollable-list-card hidden">
+                    <div class="planner-card-title" style="margin-bottom: 12px;">Chargers Along Your Route</div>
+                    <div id="route-chargers-list">
+                        <!-- Appended dynamically via script.js -->
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- 3. IMPACT (PRICING & GRID) TAB -->
+        <div id="panel-pricing" class="tab-panel">
+            <div class="planner-screen-container">
+                <header class="planner-top-header">
+                    <div class="planner-brand">
+                        <span class="brand-title">GridSync</span>
+                    </div>
+                    <span class="header-subtitle-tag">Pricing & Grid Telemetry</span>
+                </header>
+
+                <div class="planner-card">
+                    <div class="planner-card-title">Dynamic Pricing & Grid Status</div>
+                    
+                    <div class="grid-status-header">
+                        <div class="status-metric">
+                            <span class="metric-label">REGIONAL GRID DEMAND</span>
+                            <span class="metric-val" id="atlas-grid-demand">UNAVAILABLE</span>
+                            <span class="metric-sub" id="atlas-timestamp">Last sync: --:--</span>
+                        </div>
+                        <div class="status-metric">
+                            <span class="metric-label">CURRENT FREQUENCY</span>
+                            <span class="metric-val" id="atlas-frequency">-- Hz</span>
+                            <span class="metric-sub" id="atlas-source">Source: India Energy Atlas</span>
+                        </div>
+                    </div>
+
+                    <div class="grid-classification-box" id="grid-status-box">
+                        <span class="grid-badge" id="grid-classification-badge">UNAVAILABLE</span>
+                        <p id="grid-pricing-period">Pricing condition loading...</p>
+                    </div>
+
+                    <!-- Recommendation box -->
+                    <div class="pricing-recommendation-box" id="pricing-recommendation">
+                        <h4>Grid Recommendation</h4>
+                        <p class="rec-verdict wait">LOADING TELEMETRY...</p>
+                    </div>
+
+                    <!-- Time Series Chart -->
+                    <div class="chart-container">
+                        <canvas id="pricingChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 4. PROFILE TAB -->
+        <div id="panel-profile" class="tab-panel">
+            <div class="planner-screen-container">
+                <header class="planner-top-header">
+                    <div class="planner-brand">
+                        <span class="brand-title">GridSync</span>
+                    </div>
+                    <span class="header-subtitle-tag">Driver Profile</span>
+                </header>
+
+                <div class="planner-card">
+                    <div class="planner-card-title">Personal Details</div>
+                    <div class="detail-row"><strong>Name:</strong> <span id="prof-name">--</span></div>
+                    <div class="detail-row"><strong>Email:</strong> <span id="prof-email">--</span></div>
+                    <div class="detail-row"><strong>Phone:</strong> <span id="prof-phone">--</span></div>
+                </div>
+
+                <div class="planner-card">
+                    <div class="card-header-flex" style="margin-bottom: 8px;">
+                        <span class="planner-card-title">EV Parameters</span>
+                        <button class="btn-profile-edit" onclick="openVehicleSetupModal()" style="background: transparent; border: none; color: #10b981; font-size: 0.75rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 4px;">
+                            <span class="material-symbols-outlined" style="font-size: 0.95rem;">edit</span> Edit Profile
+                        </button>
+                    </div>
+                    <div class="detail-row"><strong>Model:</strong> <span id="prof-model">--</span></div>
+                    <div class="detail-row"><strong>Reg Number:</strong> <span id="prof-regno">--</span></div>
+                    <div class="detail-row"><strong>Battery:</strong> <span id="prof-capacity">-- kWh</span></div>
+                    <div class="detail-row"><strong>Max Range:</strong> <span id="prof-range">-- km</span></div>
+                    <div class="detail-row"><strong>Connector:</strong> <span id="prof-connector">--</span></div>
+                </div>
+
+                <div class="planner-card impact-card">
+                    <div class="planner-card-title">Your GridSync Impact</div>
+                    <p class="impact-card-subtitle">Every trip you route through GridSync helps keep charging infrastructure funded and used sustainably.</p>
+                    <div class="impact-mini-grid">
+                        <div class="impact-mini-stat">
+                            <span class="impact-mini-value" id="my-impact-diversions">0</span>
+                            <span class="impact-mini-label">Chargers found via GridSync</span>
+                        </div>
+                        <div class="impact-mini-stat">
+                            <span class="impact-mini-value" id="my-impact-kwh">0 kWh</span>
+                            <span class="impact-mini-label">Est. energy charged</span>
+                        </div>
+                        <div class="impact-mini-stat">
+                            <span class="impact-mini-value" id="my-impact-co2">0 kg</span>
+                            <span class="impact-mini-label">Est. CO2 avoided</span>
+                        </div>
+                        <div class="impact-mini-stat">
+                            <span class="impact-mini-value" id="my-impact-revenue">₹0</span>
+                            <span class="impact-mini-label">Directed to operators</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="planner-card">
+                    <div class="planner-card-title">Saved Stations</div>
+                    <ul class="saved-stations-list" id="prof-saved-list">
+                        <li class="placeholder-item">No saved stations. Click bookmark on charger cards to add.</li>
+                    </ul>
+                </div>
+
+                <div class="planner-card">
+                    <div class="planner-card-title">Recent Charging History</div>
+                    <div class="history-list" id="prof-history-list">
+                        <!-- Loaded dynamically -->
+                    </div>
+                </div>
+
+                <button class="btn-danger-outline full-width" onclick="handleAuthLogout()" style="margin-top: 10px; padding: 12px; border-radius: 12px;">LOGOUT</button>
+            </div>
+        </div>
+
+        <!-- Persistent Bottom Navigation Bar (Home, Trip Planner, Pricing, Profile) -->
+        <nav id="bottom-navigation">
+            <button class="nav-item active" id="nav-home" onclick="switchUserTab('home')">
+                <div class="nav-icon-wrapper">
+                    <span class="material-symbols-outlined">home</span>
+                </div>
+                <span class="nav-label">Home</span>
+            </button>
+            <button class="nav-item" id="nav-plan" onclick="switchUserTab('plan')">
+                <div class="nav-icon-wrapper">
+                    <span class="material-symbols-outlined">alt_route</span>
+                </div>
+                <span class="nav-label">Trip Planner</span>
+            </button>
+            <button class="nav-item" id="nav-pricing" onclick="switchUserTab('pricing')">
+                <div class="nav-icon-wrapper">
+                    <span class="material-symbols-outlined">payments</span>
+                </div>
+                <span class="nav-label">Pricing</span>
+            </button>
+            <button class="nav-item" id="nav-profile" onclick="switchUserTab('profile')">
+                <div class="nav-icon-wrapper">
+                    <span class="material-symbols-outlined">person</span>
+                </div>
+                <span class="nav-label">Profile</span>
+            </button>
+        </nav>
+    </main>
+
+    <!-- ==================== ADMIN DASHBOARD SHELL ==================== -->
+    <main id="admin-app-shell" class="app-shell hidden">
+        <header id="admin-header">
+            <div class="logo">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20" fill="#10b981">
+                    <path d="M11 6L6.5 13h4.5v5l4.5-7h-4.5z"/>
+                </svg>
+                <h2>GridSync Admin Dashboard</h2>
+            </div>
+            <div class="admin-profile-row">
+                <span id="admin-user-name">GridSync Controller</span>
+                <button class="btn-admin-logout" onclick="handleAuthLogout()">Logout</button>
+            </div>
+        </header>
+
+        <nav id="admin-top-navigation">
+            <button class="admin-nav-btn active" id="adm-nav-dash" onclick="switchAdminTab('dash')">Overview</button>
+            <button class="admin-nav-btn" id="adm-nav-map" onclick="switchAdminTab('map')">Live Control Map</button>
+            <button class="admin-nav-btn" id="adm-nav-stations" onclick="switchAdminTab('stations')">Manage Stations</button>
+            <button class="admin-nav-btn" id="adm-nav-analytics" onclick="switchAdminTab('analytics')">System Analytics</button>
+        </nav>
+
+        <!-- ADMIN TAB: DASHBOARD OVERVIEW -->
+        <section id="admin-panel-dash" class="admin-tab-panel active">
+            <div class="impact-header-row">
+                <h3 class="impact-section-title">GridSync Impact — Traffic Diverted Through Our App</h3>
+                <span class="impact-source-badge" id="impact-data-source">--</span>
+            </div>
+            <div class="admin-stats-grid impact-stats-grid">
+                <div class="stat-card green">
+                    <span class="stat-title">CHARGERS DIVERTED TO</span>
+                    <span class="stat-value" id="impact-diversions">0</span>
+                    <span class="stat-sub">Sessions routed to a charger by GridSync</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-title">EST. ENERGY ROUTED</span>
+                    <span class="stat-value" id="impact-kwh">0 kWh</span>
+                    <span class="stat-sub">Estimated demand sent to operators</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-title">EST. REVENUE TO OPERATORS</span>
+                    <span class="stat-value" id="impact-revenue">₹0</span>
+                    <span class="stat-sub">Estimated charging spend directed</span>
+                </div>
+                <div class="stat-card green">
+                    <span class="stat-title">EST. CO2 AVOIDED</span>
+                    <span class="stat-value" id="impact-co2">0 kg</span>
+                    <span class="stat-sub">Vs. equivalent petrol driving</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-title">OFF-PEAK / LOW-STRESS SHARE</span>
+                    <span class="stat-value" id="impact-offpeak">0%</span>
+                    <span class="stat-sub">Diversions during low grid stress</span>
+                </div>
+            </div>
+
+            <div class="dashboard-widgets-row">
+                <div class="widget-card half">
+                    <h3>Diversions — Last 14 Days</h3>
+                    <div class="chart-container" style="height: 220px;">
+                        <canvas id="impactTrendChart"></canvas>
+                    </div>
+                </div>
+                <div class="widget-card half">
+                    <h3>Top Diverted-To Stations</h3>
+                    <div class="table-container">
+                        <table class="admin-table">
+                            <thead>
+                                <tr>
+                                    <th>Station</th>
+                                    <th>Diversions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="impact-top-stations">
+                                <tr><td colspan="2" class="no-data">No diversions logged yet.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="admin-stats-grid">
+                <div class="stat-card">
+                    <span class="stat-title">TOTAL STATIONS</span>
+                    <span class="stat-value" id="stat-total-stations">0</span>
+                    <span class="stat-sub">Across Maharashtra</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-title">TOTAL CONNECTORS</span>
+                    <span class="stat-value" id="stat-total-chargers">0</span>
+                    <span class="stat-sub">Plotted locally</span>
+                </div>
+                <div class="stat-card green">
+                    <span class="stat-title">OPERATIONAL (FREE)</span>
+                    <span class="stat-value" id="stat-avail-chargers">0</span>
+                    <span class="stat-sub">Ready for use</span>
+                </div>
+                <div class="stat-card orange">
+                    <span class="stat-title">BUSY (IN-USE)</span>
+                    <span class="stat-value" id="stat-busy-chargers">0</span>
+                    <span class="stat-sub">Charging active</span>
+                </div>
+                <div class="stat-card red">
+                    <span class="stat-title">FAULTY (BROKEN)</span>
+                    <span class="stat-value" id="stat-faulty-chargers">0</span>
+                    <span class="stat-sub">Community / Telemetry flags</span>
+                </div>
+            </div>
+
+            <div class="dashboard-widgets-row">
+                <div class="widget-card half">
+                    <h3>Recent Community Fault Logs</h3>
+                    <div class="table-container">
+                        <table class="admin-table">
+                            <thead>
+                                <tr>
+                                    <th>Station Name</th>
+                                    <th>Reported Status</th>
+                                    <th>Timestamp</th>
+                                    <th>User ID</th>
+                                </tr>
+                            </thead>
+                            <tbody id="admin-recent-reports">
+                                <tr>
+                                    <td colspan="4" class="no-data">No community logs registered.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="widget-card half">
+                    <h3>Peak Grid Demand Telemetry</h3>
+                    <div class="admin-demand-box">
+                        <div class="telemetry-value-row">
+                            <span class="tel-num" id="admin-demand-num">-- MW</span>
+                            <span class="tel-badge grid-low" id="admin-demand-badge">NORMAL</span>
+                        </div>
+                        <p class="tel-time" id="admin-demand-time">Sync: --:--</p>
+                        <div class="progress-bar-bg">
+                            <div class="progress-bar-fill" id="admin-demand-progress" style="width: 0%;"></div>
+                        </div>
+                        <p class="tel-desc">Real-time regional grid stress derived from posoco-sldc. Frequency current: <strong id="admin-freq-num">-- Hz</strong></p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ADMIN TAB: CONTROL MAP -->
+        <section id="admin-panel-map" class="admin-tab-panel">
+            <div class="admin-map-control-row">
+                <div class="admin-map-filters">
+                    <label>Filter Pins:</label>
+                    <button class="btn-filter-admin active" onclick="filterAdminMapPins('All')">ALL</button>
+                    <button class="btn-filter-admin" onclick="filterAdminMapPins('Available')">AVAILABLE</button>
+                    <button class="btn-filter-admin" onclick="filterAdminMapPins('Busy')">BUSY</button>
+                    <button class="btn-filter-admin" onclick="filterAdminMapPins('Faulty')">FAULTY</button>
+                    <button class="btn-filter-admin" onclick="filterAdminMapPins('Offline')">OFFLINE</button>
+                </div>
+            </div>
+            <div id="admin-map-wrapper">
+                <!-- Move user map to this wrapper when Admin Map opens -->
+            </div>
+        </section>
+
+        <!-- ADMIN TAB: MANAGE STATIONS -->
+        <section id="admin-panel-stations" class="admin-tab-panel">
+            <div class="station-management-header">
+                <div class="search-sort-box">
+                    <input type="text" id="admin-station-search" placeholder="Search station by name, operator, address..." oninput="renderAdminStationsTable()">
+                    <select id="admin-station-sort" onchange="renderAdminStationsTable()">
+                        <option value="name">Sort by Station Name</option>
+                        <option value="operator">Sort by Operator</option>
+                        <option value="chargers">Sort by Total Chargers</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="table-container main-list">
+                <table class="admin-table">
+                    <thead>
+                        <tr>
+                            <th>Station Name</th>
+                            <th>Operator</th>
+                            <th>Address</th>
+                            <th>Total Connectors</th>
+                            <th>Status (Local)</th>
+                            <th>Availability</th>
+                            <th>Source</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="admin-stations-list-body">
+                        <!-- Loaded dynamically -->
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- ADMIN TAB: ANALYTICS -->
+        <section id="admin-panel-analytics" class="admin-tab-panel">
+            <div class="analytics-charts-grid">
+                <div class="widget-card">
+                    <h3>Station Charger Utilization Ratio</h3>
+                    <div class="chart-container-large">
+                        <canvas id="utilizationChart"></canvas>
+                    </div>
+                </div>
+                <div class="widget-card">
+                    <h3>Connector Availability Share</h3>
+                    <div class="chart-container-large">
+                        <canvas id="availabilityChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- ==================== ADMIN EDIT STATION MODAL ==================== -->
+    <div id="admin-edit-station-modal" class="modal-overlay hidden">
+        <div class="modal-card large">
+            <div class="modal-header">
+                <h3>Edit Station Details</h3>
+                <span class="material-symbols-outlined close-icon" onclick="closeAdminEditModal()">close</span>
+            </div>
+            
+            <form id="admin-edit-station-form" onsubmit="saveAdminStationEdit(event)">
+                <input type="hidden" id="edit-station-id">
+                
+                <div class="form-row">
+                    <div class="form-group half">
+                        <label>Station Name</label>
+                        <input type="text" id="edit-station-title" required>
+                    </div>
+                    <div class="form-group half">
+                        <label>Operator</label>
+                        <input type="text" id="edit-station-operator" required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Address</label>
+                    <input type="text" id="edit-station-address" required>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group half">
+                        <label>Latitude</label>
+                        <input type="number" id="edit-station-lat" step="0.000001" required>
+                    </div>
+                    <div class="form-group half">
+                        <label>Longitude</label>
+                        <input type="number" id="edit-station-lng" step="0.000001" required>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group half">
+                        <label>Opening Hours</label>
+                        <input type="text" id="edit-station-hours" placeholder="e.g. 24/7, 08:00 - 22:00">
+                    </div>
+                    <div class="form-group half">
+                        <label>Contact Phone</label>
+                        <input type="text" id="edit-station-contact">
+                    </div>
+                </div>
+
+                <div class="admin-connector-management-box">
+                    <h4>Connector Status Overrides</h4>
+                    <p class="sub-instructions">Modify status of individual connectors at this station:</p>
+                    <div id="edit-connectors-list">
+                        <!-- Loaded dynamically -->
+                    </div>
+                </div>
+
+                <div class="modal-actions">
+                    <button type="button" class="btn-secondary" onclick="closeAdminEditModal()">Cancel</button>
+                    <button type="submit" class="btn-primary">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+</body>
+</html>
