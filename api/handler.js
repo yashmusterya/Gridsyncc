@@ -1153,6 +1153,63 @@ module.exports = async (req, res) => {
         return res.end(JSON.stringify({ status: 'SUCCESS', user: toSafeUser(user) }));
     }
 
+    // API Endpoint: Toggle a station bookmark on the caller's own profile.
+    // Previously this was entirely client-side (activeUser.savedStations
+    // mutated in memory only) - never sent to the server and never persisted
+    // to the session cache either, so a bookmark vanished on any page reload.
+    if (pathname === '/api/user/bookmark' && req.method === 'POST') {
+        const auth = requireAuth(req, res);
+        if (!auth) return;
+
+        if (!body || !body.stationId) {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            return res.end(JSON.stringify({ error: 'Missing stationId' }));
+        }
+        const targetEmail = auth.email;
+
+        const applyToggle = (current) => {
+            const list = Array.isArray(current) ? current.slice() : [];
+            const idx = list.indexOf(body.stationId);
+            if (idx > -1) list.splice(idx, 1); else list.push(body.stationId);
+            return list;
+        };
+
+        if (supabaseEnabled()) {
+            try {
+                const existingRows = await supabaseRequest('GET', 'users', {
+                    query: `select=saved_stations&email=eq.${encodeURIComponent(targetEmail)}&limit=1`
+                });
+                if (!Array.isArray(existingRows) || !existingRows[0]) {
+                    res.writeHead(404, { 'Content-Type': 'application/json' });
+                    return res.end(JSON.stringify({ error: 'User not found' }));
+                }
+                const nextList = applyToggle(existingRows[0].saved_stations);
+                const rows = await supabaseRequest('PATCH', `users?email=eq.${encodeURIComponent(targetEmail)}`, {
+                    body: { saved_stations: nextList },
+                    extraHeaders: { 'Prefer': 'return=representation' }
+                });
+                if (Array.isArray(rows) && rows[0]) {
+                    res.writeHead(200, { 'Content-Type': 'application/json' });
+                    return res.end(JSON.stringify({ status: 'SUCCESS', user: toSafeUser(normalizeUserRow(rows[0])) }));
+                }
+                res.writeHead(404, { 'Content-Type': 'application/json' });
+                return res.end(JSON.stringify({ error: 'User not found' }));
+            } catch (err) {
+                console.error('Supabase bookmark toggle error, falling back to in-memory:', err.message);
+            }
+        }
+
+        const user = store.users.find(u => u.email === targetEmail);
+        if (!user) {
+            res.writeHead(404, { 'Content-Type': 'application/json' });
+            return res.end(JSON.stringify({ error: 'User not found' }));
+        }
+        user.savedStations = applyToggle(user.savedStations);
+        writeStore(store);
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        return res.end(JSON.stringify({ status: 'SUCCESS', user: toSafeUser(user) }));
+    }
+
     // API Endpoint: Submit Charger Working Report
     if (pathname === '/api/reports/add' && req.method === 'POST') {
         const auth = requireAuth(req, res);

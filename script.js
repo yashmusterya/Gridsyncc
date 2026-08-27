@@ -768,30 +768,49 @@ window.submitChargerReport = async function(stationId, isWorking) {
 /**
  * Handle bookmarking (Save/Remove stations in Profile)
  */
-window.toggleBookmarkStation = function(stationId) {
+window.toggleBookmarkStation = async function(stationId) {
     if (!activeUser) {
-        alert('Please login to bookmark stations.');
+        showToastNotification('Please log in to bookmark stations.');
         return;
     }
-    
+
+    // Optimistic local update so the star/toast responds instantly...
     if (!activeUser.savedStations) activeUser.savedStations = [];
     const index = activeUser.savedStations.indexOf(stationId);
-    
-    if (index > -1) {
+    const wasRemoved = index > -1;
+    if (wasRemoved) {
         activeUser.savedStations.splice(index, 1);
-        showToastNotification('Removed from saved stations.');
     } else {
         activeUser.savedStations.push(stationId);
-        showToastNotification('Station bookmarked successfully!');
     }
-    
-    // Refresh open templates
+
     const station = allStations.find(s => s.id === stationId);
     if (station) {
         const content = document.getElementById('bottom-sheet-content');
         if (content) content.innerHTML = createInfoWindowContent(station, station.liveGridData);
     }
     renderProfileDetails();
+
+    // ...then sync to the server and the cached session, so the bookmark
+    // survives a reload instead of being purely in-memory (it used to never
+    // be sent to the server at all).
+    try {
+        const res = await apiFetch('/api/user/bookmark', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ stationId })
+        });
+        if (res.ok) {
+            const data = await res.json();
+            activeUser = data.user;
+            persistSession(authToken, activeUser);
+            renderProfileDetails();
+        }
+        showToastNotification(wasRemoved ? 'Removed from saved stations.' : 'Station bookmarked successfully!');
+    } catch (err) {
+        console.warn('Bookmark sync failed, kept locally for this session:', err);
+        showToastNotification(wasRemoved ? 'Removed locally (offline).' : 'Bookmarked locally (offline).');
+    }
 };
 
 /**
@@ -1230,14 +1249,43 @@ function evaluateStationWithML(station, userLat, userLng) {
 /**
  * Determine predicted grid load metrics and estimated prices deterministically
  */
-function getStationGridLoadAndPrice(station) {
+/**
+ * Time-of-day demand factor (0-1), mirroring the peak/off-peak windows used by
+ * /api/predict_arrival server-side (17:00-20:00 peak, 22:00-06:00 off-peak).
+ * Kept as a separate factor rather than folded into the grid stress index so
+ * pricing responds to time-of-day even when live grid telemetry is flat -
+ * a station is genuinely busier at 7 PM than at 3 AM regardless of what the
+ * regional demand feed says at that moment.
+ */
+function getTimeOfDayFactor(date = new Date()) {
+    const hour = date.getHours();
+    if (hour >= 17 && hour <= 20) return 1.0;   // evening peak
+    if (hour >= 22 || hour <= 6) return 0.05;   // night off-peak
+    return 0.45;                                 // daytime standard
+}
+
+function getTimeOfDayLabel(date = new Date()) {
+    const hour = date.getHours();
+    if (hour >= 17 && hour <= 20) return 'PEAK';
+    if (hour >= 22 || hour <= 6) return 'OFF-PEAK';
+    return 'STANDARD';
+}
+
+/**
+ * Dynamic per-station price: blends live/simulated grid stress, time-of-day
+ * demand, and a per-station variation so two stations don't show an identical
+ * price. Base tariffs (AC ₹5.5, DC ₹11.5 per kWh) match the admin-side pricing
+ * documented in CLAUDE.md.
+ */
+function getStationGridLoadAndPrice(station, date = new Date()) {
     const hash = Math.abs(Math.sin(station.latitude * 1000 + station.longitude * 1000));
     const stressIndex = getGridStressIndex();
-    const combinedLoadFactor = (hash * 0.4) + (stressIndex * 0.6);
-    
+    const timeFactor = getTimeOfDayFactor(date);
+    const combinedLoadFactor = (hash * 0.25) + (stressIndex * 0.45) + (timeFactor * 0.30);
+
     let load = 'LOW';
     let priceMultiplier = 1.0;
-    
+
     if (combinedLoadFactor > 0.8) {
         load = 'CRITICAL';
         priceMultiplier = 1.65;
@@ -1248,14 +1296,16 @@ function getStationGridLoadAndPrice(station) {
         load = 'MEDIUM';
         priceMultiplier = 1.15;
     }
-    
+
     const type = getStationType(station);
     const basePrice = (type === 'DC') ? 11.5 : 5.5;
     const priceVal = (basePrice * priceMultiplier).toFixed(2);
-    
+
     return {
         gridLoad: load,
-        price: `₹${priceVal}/kWh`
+        price: `₹${priceVal}/kWh`,
+        priceNum: parseFloat(priceVal),
+        timePeriod: getTimeOfDayLabel(date)
     };
 }
 
@@ -2174,6 +2224,10 @@ window.switchUserTab = function(tabName) {
     document.querySelectorAll('#bottom-navigation .nav-item').forEach(btn => btn.classList.remove('active'));
     document.querySelectorAll('.tab-panel').forEach(panel => panel.classList.remove('active'));
 
+    // Only the pricing tab needs its 60s refresh timer; leaving it should stop
+    // the timer regardless of which tab the driver goes to next.
+    if (tabName !== 'pricing') stopPricingAutoRefresh();
+
     // Activate selected
     const navBtn = document.getElementById(`nav-${tabName}`);
     if (navBtn) navBtn.classList.add('active');
@@ -2205,6 +2259,7 @@ window.switchUserTab = function(tabName) {
         }
     } else if (tabName === 'pricing') {
         renderPricingMetrics();
+        startPricingAutoRefresh();
     } else if (tabName === 'profile') {
         renderProfileDetails();
     }
@@ -2264,7 +2319,7 @@ window.switchAdminTab = function(tabName) {
  */
 function renderProfileDetails() {
     if (!activeUser) return;
-    
+
     const profName = document.getElementById('prof-name');
     if (profName) profName.textContent = activeUser.name || 'EV Driver';
     const profEmail = document.getElementById('prof-email');
@@ -2355,6 +2410,10 @@ function renderProfileDetails() {
         }
     }
 
+    // Runs after vehicleRange/minReserve above have been synced from
+    // activeUser - it was previously called at the top of this function and
+    // read the stale pre-sync values.
+    renderDriverDashboard();
     loadMyImpact();
 }
 
@@ -2374,8 +2433,55 @@ function loadMyImpact() {
             setText('my-impact-kwh', `${data.estimatedKwh.toLocaleString()} kWh`);
             setText('my-impact-co2', `${data.estimatedCo2SavedKg.toLocaleString()} kg`);
             setText('my-impact-revenue', `₹${data.estimatedRevenueInr.toLocaleString()}`);
+            // Shared with the Driver Dashboard card at the top of this tab -
+            // one fetch, two places rendered from it.
+            setText('dash-trips-val', data.routesPlanned.toLocaleString());
+            setText('dash-co2-val', `${data.estimatedCo2SavedKg.toLocaleString()} kg`);
         })
         .catch(err => console.warn('Could not load personal impact:', err));
+}
+
+/**
+ * Driver Dashboard card at the top of the Profile tab: current battery/range,
+ * the single nearest charger with its live dynamic price, and a jump to the
+ * saved-stations list below. Vehicle stats render immediately from local
+ * state; the impact numbers arrive from loadMyImpact()'s existing fetch.
+ */
+function renderDriverDashboard() {
+    const battEl = document.getElementById('dash-battery-val');
+    const rangeEl = document.getElementById('dash-range-val');
+    const updatedEl = document.getElementById('dash-updated-at');
+    if (battEl) battEl.textContent = `${Math.round(vehicleSOC)}%`;
+    if (rangeEl) rangeEl.textContent = `${Math.round((vehicleSOC / 100) * vehicleRange)} km`;
+    if (updatedEl) updatedEl.textContent = `Updated ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+
+    const nearestBox = document.getElementById('dash-nearest-charger');
+    if (!nearestBox) return;
+
+    if (!allStations || allStations.length === 0) {
+        nearestBox.innerHTML = '<p class="no-data">Finding chargers near you…</p>';
+        return;
+    }
+
+    const [nearest] = findNearbyStations(NEARBY_PRICING_RADIUS_METERS, 1);
+    if (!nearest) {
+        nearestBox.innerHTML = `<p class="no-data">No chargers within ${NEARBY_PRICING_RADIUS_METERS / 1000} km of your current location.</p>`;
+        return;
+    }
+
+    const gridInfo = getStationGridLoadAndPrice(nearest.station);
+    const distKm = (nearest.distMeters / 1000).toFixed(1);
+    nearestBox.innerHTML = `
+        <div class="dash-nearest-label">NEAREST CHARGER</div>
+        <div class="route-charger-list-item" style="margin:0;" onclick="focusStationOnMap('${nearest.station.id}')">
+            <div class="route-charger-title">${escapeHtml(nearest.station.title)}</div>
+            <div class="route-charger-stats">
+                <span>📍 ${distKm} km away</span>
+                <span style="font-weight:700; color:#10b981;">${gridInfo.price}</span>
+                <span class="grid-badge grid-${gridInfo.gridLoad.toLowerCase()}" style="padding:1px 6px;">${gridInfo.gridLoad}</span>
+            </div>
+        </div>
+    `;
 }
 
 /**
@@ -2505,6 +2611,7 @@ window.handleAuthLogout = function() {
     routePolylinePath = [];
     onRouteChargers = [];
     stopAdminAutoRefresh();
+    stopPricingAutoRefresh();
     clearDirectionsRoute();
 
     document.getElementById('user-app-shell').classList.add('hidden');
@@ -2605,8 +2712,14 @@ async function planTrip(customEndLocation, customTitle) {
         return;
     }
 
+    // 'Current Location' is the input's default HTML value AND what
+    // fillGPSLocation() sets it to; 'My Location (GPS)' is what the
+    // geolocation-success path sets it to. Both are GPS sentinels, not real
+    // place names - passing either straight to the Directions API as literal
+    // text fails with DIRECTIONS_ROUTE: NOT_FOUND, which is why "Plan Route"
+    // did nothing for a driver who never touched the origin field.
     let startPoint;
-    if (startVal === 'My Location (GPS)' || startVal === '') {
+    if (startVal === 'My Location (GPS)' || startVal === 'Current Location' || startVal === '') {
         if (userLocation) {
             startPoint = userLocation;
         } else {
@@ -2718,15 +2831,31 @@ window.removeChargerStopover = function() {
 function renderRouteChargersList() {
     const container = document.getElementById('route-chargers-container');
     const listBody = document.getElementById('route-chargers-list');
-    
+
     if (!container || !listBody) return;
-    
-    if (routePolylinePath.length === 0 || onRouteChargers.length === 0) {
+
+    // No route planned yet: nothing to show at all, not even an empty state.
+    if (routePolylinePath.length === 0) {
         container.classList.add('hidden');
         return;
     }
 
     container.classList.remove('hidden');
+
+    // A route exists but nothing fell within the search radius. This used to
+    // hide the whole card, which is indistinguishable from the feature not
+    // working at all - a driver on a route with sparser charger coverage saw
+    // no section here rather than an explanation.
+    if (onRouteChargers.length === 0) {
+        listBody.innerHTML = `
+            <p class="no-data" style="padding: 8px 0;">
+                No chargers found within 5 km of this route. Try widening your route
+                or check the map for stations further off the highway.
+            </p>
+        `;
+        return;
+    }
+
     listBody.innerHTML = '';
 
     onRouteChargers.forEach(station => {
@@ -3013,7 +3142,7 @@ async function renderPricingMetrics() {
     const demandVal = liveGridDemand ? `${liveGridDemand.demand_mw.toLocaleString()} MW` : 'UNAVAILABLE';
     const demandTime = liveGridDemand ? new Date(liveGridDemand.as_of).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--';
     const frequencyVal = liveGridDemand ? `${liveGridDemand.frequency_hz.toFixed(2)} Hz` : '-- Hz';
-    
+
     const atlasDemandEl = document.getElementById('atlas-grid-demand');
     const atlasTimeEl = document.getElementById('atlas-timestamp');
     const atlasFreqEl = document.getElementById('atlas-frequency');
@@ -3025,6 +3154,16 @@ async function renderPricingMetrics() {
     if (atlasDemandEl) atlasDemandEl.textContent = demandVal;
     if (atlasTimeEl) atlasTimeEl.textContent = `Last sync: ${demandTime}`;
     if (atlasFreqEl) atlasFreqEl.textContent = frequencyVal;
+
+    const timePeriodBadge = document.getElementById('pricing-time-period-badge');
+    if (timePeriodBadge) {
+        const periodNow = getTimeOfDayLabel();
+        timePeriodBadge.textContent = periodNow;
+        timePeriodBadge.className = 'grid-badge ' + (
+            periodNow === 'PEAK' ? 'grid-high' : periodNow === 'OFF-PEAK' ? 'grid-low' : 'grid-medium'
+        );
+    }
+    renderNearbyPricingList();
 
     // Remove old stress classes
     if (statusBox) {
@@ -3131,6 +3270,112 @@ async function renderPricingMetrics() {
     });
 }
 
+const NEARBY_PRICING_RADIUS_METERS = 15000;
+const NEARBY_PRICING_MAX_ROWS = 8;
+let pricingAutoRefreshTimer = null;
+
+/**
+ * Lists chargers within NEARBY_PRICING_RADIUS_METERS of the driver's current
+ * location (falling back to the map center when GPS hasn't resolved yet),
+ * each with its own live price from getStationGridLoadAndPrice() - which now
+ * factors in time of day, not just aggregate grid demand. This is what
+ * actually answers "what will charging cost me right now, near me", which the
+ * grid-wide status box above it does not.
+ */
+/**
+ * Stations near the driver's current location (or map center as a fallback
+ * before GPS resolves), nearest first. Shared by the Pricing tab's nearby
+ * list and the Profile dashboard's "Nearest Charger" card so both agree on
+ * what "near you" means instead of each computing it separately.
+ */
+function findNearbyStations(maxMeters, maxCount) {
+    if (!allStations || allStations.length === 0) return [];
+
+    const originLat = userLocation ? userLocation.lat : (map ? map.getCenter().lat() : 19.2183);
+    const originLng = userLocation ? userLocation.lng : (map ? map.getCenter().lng() : 72.9781);
+
+    return allStations
+        .map(station => ({
+            station,
+            distMeters: getDistanceMeters(originLat, originLng, station.latitude, station.longitude)
+        }))
+        .filter(entry => entry.distMeters <= maxMeters)
+        .sort((a, b) => a.distMeters - b.distMeters)
+        .slice(0, maxCount);
+}
+
+function renderNearbyPricingList() {
+    const listEl = document.getElementById('nearby-pricing-list');
+    if (!listEl) return;
+
+    if (!allStations || allStations.length === 0) {
+        listEl.innerHTML = '<p class="no-data">Loading nearby chargers…</p>';
+        return;
+    }
+
+    const nearby = findNearbyStations(NEARBY_PRICING_RADIUS_METERS, NEARBY_PRICING_MAX_ROWS);
+
+    if (nearby.length === 0) {
+        listEl.innerHTML = `<p class="no-data">No chargers found within ${NEARBY_PRICING_RADIUS_METERS / 1000} km of your current location.</p>`;
+        return;
+    }
+
+    listEl.innerHTML = nearby.map(({ station, distMeters }) => {
+        const type = getStationType(station);
+        const gridInfo = getStationGridLoadAndPrice(station);
+        const distKm = (distMeters / 1000).toFixed(1);
+        const loadClass = gridInfo.gridLoad.toLowerCase();
+
+        return `
+            <div class="route-charger-list-item" onclick="focusStationOnMap('${station.id}')">
+                <div class="route-charger-title">${escapeHtml(station.title)}</div>
+                <div class="route-charger-stats">
+                    <span>📍 ${distKm} km away</span>
+                    <span>🔌 ${type}</span>
+                    <span class="grid-badge grid-${loadClass}" style="padding:1px 6px;">${gridInfo.gridLoad}</span>
+                </div>
+                <div class="route-charger-stats" style="margin-top:2px;">
+                    <span style="font-weight:700; color:#10b981;">${gridInfo.price}</span>
+                    <span>Availability: ${station.liveStatus ? '🟢 LIVE' : '⚪ STATIC'}</span>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+/**
+ * Keeps the Pricing tab's per-station prices and time-period badge current
+ * while the tab is open - price depends on the clock, so a driver sitting on
+ * this tab across an hour boundary should see it change without navigating away.
+ */
+function startPricingAutoRefresh() {
+    stopPricingAutoRefresh();
+    pricingAutoRefreshTimer = setInterval(() => {
+        if (document.hidden) return;
+        const panel = document.getElementById('panel-pricing');
+        if (!panel || !panel.classList.contains('active')) {
+            stopPricingAutoRefresh();
+            return;
+        }
+        renderNearbyPricingList();
+        const timePeriodBadge = document.getElementById('pricing-time-period-badge');
+        if (timePeriodBadge) {
+            const periodNow = getTimeOfDayLabel();
+            timePeriodBadge.textContent = periodNow;
+            timePeriodBadge.className = 'grid-badge ' + (
+                periodNow === 'PEAK' ? 'grid-high' : periodNow === 'OFF-PEAK' ? 'grid-low' : 'grid-medium'
+            );
+        }
+    }, 60000);
+}
+
+function stopPricingAutoRefresh() {
+    if (pricingAutoRefreshTimer) {
+        clearInterval(pricingAutoRefreshTimer);
+        pricingAutoRefreshTimer = null;
+    }
+}
+
 /**
  * Interactive scrolling EV road leaf leaves animation
  */
@@ -3190,7 +3435,7 @@ function toggleSimulator() {
     }
 
     if (routePolylinePath.length === 0) {
-        alert('Please plan a trip route first.');
+        showToastNotification('Plan a trip route first, then simulate the drive.');
         return;
     }
 
@@ -3985,6 +4230,12 @@ window.handleSaveVehicleProfile = async function(e) {
         if (res.ok) {
             const data = await res.json();
             activeUser = data.user;
+            // The save genuinely succeeded server-side (confirmed: the server
+            // has the update even when the UI shows stale data), but the
+            // cached session in localStorage was never refreshed - so every
+            // reload restored the OLD user object over the correct in-memory
+            // one, making a real update look like it silently reverted.
+            persistSession(authToken, activeUser);
             showToastNotification('✅ EV Profile updated successfully!');
         } else {
             throw new Error('Save failed');
@@ -3998,6 +4249,7 @@ window.handleSaveVehicleProfile = async function(e) {
         activeUser.maxRange = spec.maxRange;
         activeUser.preferredConnector = spec.connector;
         activeUser.preferredSpeed = spec.preferenceSpeed || 'DC';
+        persistSession(authToken, activeUser);
         showToastNotification('✅ EV Profile configured locally (Offline)');
     } finally {
         hideStatus();

@@ -1461,7 +1461,13 @@ html, body {
 }
 
 .bottom-sheet-panel.hidden {
-    transform: translateY(115%);
+    /* translateY(%) is relative to the element's OWN box, not the viewport -
+       for a short/content-less sheet (nothing tapped yet), 115% of its own
+       height was much less than the `bottom` offset above the nav bar, so it
+       never actually left the screen: the empty drag-handle pill stayed
+       visible, floating over the Home tab. Adding the offset explicitly
+       guarantees the sheet clears the viewport regardless of its height. */
+    transform: translateY(calc(100% + var(--nav-height) + var(--safe-bottom) + 24px));
     display: block !important;
 }
 
@@ -2411,7 +2417,10 @@ html, body {
     }
 
     .bottom-sheet-panel.hidden {
-        transform: translateY(140%);
+        /* Same fix as the mobile rule above: the desktop card sits 90px above
+           the viewport bottom, so a percentage-only translate isn't reliably
+           enough to clear it when the card is short. */
+        transform: translateY(calc(100% + 90px + 24px));
     }
 
     #bottom-navigation {
@@ -4378,4 +4387,77 @@ html, body {
     padding: 1px 5px;
     border-radius: 4px;
     font-size: 0.74rem;
+}
+
+
+/* ==========================================================================
+   DRIVER DASHBOARD (Profile tab)
+   ========================================================================== */
+
+.dashboard-card {
+    background: linear-gradient(160deg, rgba(16, 185, 129, 0.08), rgba(15, 23, 42, 0.4));
+    border: 1px solid rgba(16, 185, 129, 0.18);
+}
+
+.dashboard-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    margin-bottom: 14px;
+}
+
+.dash-stat-box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    background: rgba(15, 23, 42, 0.5);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    padding: 10px 4px;
+    text-align: center;
+}
+
+.dash-stat-label {
+    font-size: 0.62rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #94a3b8;
+}
+
+.dash-stat-value {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #f8fafc;
+}
+
+.dash-nearest-charger {
+    margin-bottom: 12px;
+}
+
+.dash-nearest-label {
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    color: #10b981;
+    margin-bottom: 6px;
+}
+
+.dash-quick-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.dash-quick-actions .btn-item-action {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+@media (max-width: 480px) {
+    .dashboard-stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
 }

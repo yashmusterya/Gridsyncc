@@ -533,6 +533,20 @@
                         <canvas id="pricingChart"></canvas>
                     </div>
                 </div>
+
+                <!-- Nearby chargers, live per-station dynamic price -->
+                <div class="planner-card">
+                    <div class="card-header-flex" style="margin-bottom: 4px;">
+                        <span class="planner-card-title">Chargers Near You</span>
+                        <span class="grid-badge" id="pricing-time-period-badge">--</span>
+                    </div>
+                    <p style="font-size: 0.72rem; color: #94a3b8; margin: 0 0 10px;">
+                        Price per station factors in grid demand, time of day, and location - refreshes automatically.
+                    </p>
+                    <div id="nearby-pricing-list">
+                        <p class="no-data">Loading nearby chargers…</p>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -545,6 +559,48 @@
                     </div>
                     <span class="header-subtitle-tag">Driver Profile</span>
                 </header>
+
+                <!-- Driver Dashboard: at-a-glance status, nearest charger, and
+                     activity totals, so the Profile tab opens on something
+                     more useful than a static account page. -->
+                <div class="planner-card dashboard-card">
+                    <div class="card-header-flex" style="margin-bottom: 10px;">
+                        <span class="planner-card-title">Your Dashboard</span>
+                        <span class="metric-sub" id="dash-updated-at">--</span>
+                    </div>
+
+                    <div class="dashboard-stats-grid">
+                        <div class="dash-stat-box">
+                            <span class="dash-stat-label">Battery</span>
+                            <span class="dash-stat-value" id="dash-battery-val">--%</span>
+                        </div>
+                        <div class="dash-stat-box">
+                            <span class="dash-stat-label">Est. Range</span>
+                            <span class="dash-stat-value" id="dash-range-val">-- km</span>
+                        </div>
+                        <div class="dash-stat-box">
+                            <span class="dash-stat-label">Trips Routed</span>
+                            <span class="dash-stat-value" id="dash-trips-val">0</span>
+                        </div>
+                        <div class="dash-stat-box">
+                            <span class="dash-stat-label">CO2 Avoided</span>
+                            <span class="dash-stat-value" id="dash-co2-val">0 kg</span>
+                        </div>
+                    </div>
+
+                    <div class="dash-nearest-charger" id="dash-nearest-charger">
+                        <p class="no-data">Finding chargers near you…</p>
+                    </div>
+
+                    <div class="dash-quick-actions">
+                        <button class="btn-item-action" onclick="switchUserTab('plan')">
+                            <span class="material-symbols-outlined" style="font-size:16px;">alt_route</span> Plan a Trip
+                        </button>
+                        <button class="btn-item-action secondary" onclick="document.getElementById('saved-stations-card')?.scrollIntoView({behavior:'smooth'})">
+                            <span class="material-symbols-outlined" style="font-size:16px;">bookmark</span> Saved Stations
+                        </button>
+                    </div>
+                </div>
 
                 <div class="planner-card">
                     <div class="planner-card-title">Personal Details</div>
@@ -590,7 +646,7 @@
                     </div>
                 </div>
 
-                <div class="planner-card">
+                <div class="planner-card" id="saved-stations-card">
                     <div class="planner-card-title">Saved Stations</div>
                     <ul class="saved-stations-list" id="prof-saved-list">
                         <li class="placeholder-item">No saved stations. Click bookmark on charger cards to add.</li>
