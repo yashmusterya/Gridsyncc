@@ -4205,15 +4205,48 @@ function renderOpsQueue() {
 }
 
 /**
- * Advances one queue item through open -> acknowledged -> resolved. The note is
- * optional; when supplied it is stored with the resolution and shown on the card.
+ * Advances one queue item through open -> acknowledged -> resolved.
+ *
+ * "resolved" collects an optional note through a proper modal rather than
+ * window.prompt() - prompt() is unreliable (silently ignored on some browsers,
+ * or simply unavailable) in an installed PWA's standalone display mode, which
+ * this app now supports. Acknowledge/reopen carry no note and fire immediately.
  */
 window.triageOpsItem = async function(stationId, status) {
-    let note = '';
     if (status === 'resolved') {
-        note = prompt(`Resolution note for "${stationNameFor(stationId)}" (optional):`, '') || '';
+        openOpsResolveModal(stationId);
+        return;
     }
+    await performTriage(stationId, status, '');
+};
 
+let opsResolveTargetId = null;
+
+function openOpsResolveModal(stationId) {
+    opsResolveTargetId = stationId;
+    const modal = document.getElementById('ops-resolve-modal');
+    const nameEl = document.getElementById('ops-resolve-station-name');
+    const noteEl = document.getElementById('ops-resolve-note');
+    if (nameEl) nameEl.textContent = stationNameFor(stationId);
+    if (noteEl) noteEl.value = '';
+    if (modal) modal.classList.remove('hidden');
+    if (noteEl) noteEl.focus();
+}
+
+window.closeOpsResolveModal = function() {
+    opsResolveTargetId = null;
+    document.getElementById('ops-resolve-modal')?.classList.add('hidden');
+};
+
+window.confirmOpsResolve = async function() {
+    if (!opsResolveTargetId) return;
+    const note = document.getElementById('ops-resolve-note')?.value || '';
+    const stationId = opsResolveTargetId;
+    closeOpsResolveModal();
+    await performTriage(stationId, 'resolved', note);
+};
+
+async function performTriage(stationId, status, note) {
     try {
         const res = await apiFetch('/api/admin/reports/resolve', {
             method: 'POST',
@@ -4234,7 +4267,7 @@ window.triageOpsItem = async function(stationId, status) {
         console.error('Triage failed:', err);
         showToastNotification('Could not reach the server.');
     }
-};
+}
 
 /**
  * Jumps to the Live Control Map and opens the info window for one station.

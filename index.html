@@ -1084,5 +1084,26 @@
         </div>
     </div>
 
+    <!-- ==================== OPS QUEUE: RESOLVE STATION MODAL ==================== -->
+    <!-- A proper modal rather than window.prompt() - prompt() is unreliable in an
+         installed PWA's standalone display mode. See triageOpsItem() in script.js. -->
+    <div id="ops-resolve-modal" class="modal-overlay hidden">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3>Mark Resolved</h3>
+                <span class="material-symbols-outlined close-icon" onclick="closeOpsResolveModal()">close</span>
+            </div>
+            <p class="ops-subtitle">Resolving <strong id="ops-resolve-station-name">this station</strong>. An optional note is shown to other operators and kept in the audit trail.</p>
+            <div class="form-group">
+                <label for="ops-resolve-note">Resolution note (optional)</label>
+                <textarea id="ops-resolve-note" rows="3" maxlength="500" placeholder="e.g. Technician replaced the faulty CCS2 cable"></textarea>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn-secondary" onclick="closeOpsResolveModal()">Cancel</button>
+                <button type="button" class="btn-primary" onclick="confirmOpsResolve()">Mark Resolved</button>
+            </div>
+        </div>
+    </div>
+
 </body>
 </html>
