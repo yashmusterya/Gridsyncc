@@ -42,9 +42,9 @@
     "semantic_hash": ""
   },
   "script.js": {
-    "mtime": 1787775908.7953558,
-    "seen": 1787776499.0847769,
-    "ast_hash": "0eb88d27b06aac1d2621d442cdc37f5b",
+    "mtime": 1787800665.2391093,
+    "seen": 1787801920.4228466,
+    "ast_hash": "fe2eaf3d944fb1a2960d8026e9f2cf52",
     "semantic_hash": ""
   },
   "scripts/seed-supabase.js": {
@@ -72,9 +72,9 @@
     "semantic_hash": ""
   },
   "index.html": {
-    "mtime": 1787775901.6617448,
-    "seen": 1787776499.0847769,
-    "ast_hash": "ca72a207a9516c6c4ff1e5f90e2670c2",
+    "mtime": 1787800693.2490945,
+    "seen": 1787801920.4228466,
+    "ast_hash": "942f7e89ace31e040f61b288efc74606",
     "semantic_hash": ""
   },
   "server.js": {

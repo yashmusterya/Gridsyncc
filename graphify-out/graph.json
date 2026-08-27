@@ -63,7 +63,7 @@
       "_callable_class": true,
       "_origin": "ast",
       "community": 12,
-      "community_name": "evaluateStationWithML",
+      "community_name": "getStationType",
       "file_type": "code",
       "norm_label": "stationrecommendationmlp",
       "source_file": "script.js",
@@ -166,18 +166,6 @@
       "source_location": "L261"
     },
     {
-      "id": "script_createinfowindowcontent",
-      "label": "createInfoWindowContent()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 0,
-      "community_name": "script.js",
-      "file_type": "code",
-      "norm_label": "createinfowindowcontent()",
-      "source_file": "script.js",
-      "source_location": "L800"
-    },
-    {
       "id": "script_downloadcsv",
       "label": "downloadCsv()",
       "_callable": true,
@@ -187,7 +175,7 @@
       "file_type": "code",
       "norm_label": "downloadcsv()",
       "source_file": "script.js",
-      "source_location": "L4411"
+      "source_location": "L4444"
     },
     {
       "id": "script_enterappasuser",
@@ -236,18 +224,6 @@
       "norm_label": "fetchindiaenergyatlasgriddata()",
       "source_file": "script.js",
       "source_location": "L1081"
-    },
-    {
-      "id": "script_fetchlivegridtelemetry",
-      "label": "fetchLiveGridTelemetry()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 0,
-      "community_name": "script.js",
-      "file_type": "code",
-      "norm_label": "fetchlivegridtelemetry()",
-      "source_file": "script.js",
-      "source_location": "L1302"
     },
     {
       "id": "script_filteronroutechargers",
@@ -358,42 +334,6 @@
       "source_location": "L2775"
     },
     {
-      "id": "script_getstationgridloadandprice",
-      "label": "getStationGridLoadAndPrice()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 0,
-      "community_name": "script.js",
-      "file_type": "code",
-      "norm_label": "getstationgridloadandprice()",
-      "source_file": "script.js",
-      "source_location": "L1233"
-    },
-    {
-      "id": "script_getstationtype",
-      "label": "getStationType()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 0,
-      "community_name": "script.js",
-      "file_type": "code",
-      "norm_label": "getstationtype()",
-      "source_file": "script.js",
-      "source_location": "L2791"
-    },
-    {
-      "id": "script_gettrustbadgehtml",
-      "label": "getTrustBadgeHTML()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 0,
-      "community_name": "script.js",
-      "file_type": "code",
-      "norm_label": "gettrustbadgehtml()",
-      "source_file": "script.js",
-      "source_location": "L215"
-    },
-    {
       "id": "script_getvehicleicon",
       "label": "getVehicleIcon()",
       "_callable": true,
@@ -463,7 +403,7 @@
       "file_type": "code",
       "norm_label": "loadadminanalyticscharts()",
       "source_file": "script.js",
-      "source_location": "L4316"
+      "source_location": "L4349"
     },
     {
       "id": "script_loadadminaudit",
@@ -475,7 +415,7 @@
       "file_type": "code",
       "norm_label": "loadadminaudit()",
       "source_file": "script.js",
-      "source_location": "L4283"
+      "source_location": "L4316"
     },
     {
       "id": "script_loadinitialdata",
@@ -526,6 +466,30 @@
       "source_location": "L619"
     },
     {
+      "id": "script_openopsresolvemodal",
+      "label": "openOpsResolveModal()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 0,
+      "community_name": "script.js",
+      "file_type": "code",
+      "norm_label": "openopsresolvemodal()",
+      "source_file": "script.js",
+      "source_location": "L4225"
+    },
+    {
+      "id": "script_performtriage",
+      "label": "performTriage()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 0,
+      "community_name": "script.js",
+      "file_type": "code",
+      "norm_label": "performtriage()",
+      "source_file": "script.js",
+      "source_location": "L4249"
+    },
+    {
       "id": "script_persistsession",
       "label": "persistSession()",
       "_callable": true,
@@ -571,7 +535,7 @@
       "file_type": "code",
       "norm_label": "renderactivitychart()",
       "source_file": "script.js",
-      "source_location": "L4361"
+      "source_location": "L4394"
     },
     {
       "id": "script_renderadminaudit",
@@ -583,7 +547,7 @@
       "file_type": "code",
       "norm_label": "renderadminaudit()",
       "source_file": "script.js",
-      "source_location": "L4295"
+      "source_location": "L4328"
     },
     {
       "id": "script_renderconnectormixchart",
@@ -595,7 +559,7 @@
       "file_type": "code",
       "norm_label": "renderconnectormixchart()",
       "source_file": "script.js",
-      "source_location": "L4381"
+      "source_location": "L4414"
     },
     {
       "id": "script_renderhourhistogram",
@@ -607,7 +571,7 @@
       "file_type": "code",
       "norm_label": "renderhourhistogram()",
       "source_file": "script.js",
-      "source_location": "L4339"
+      "source_location": "L4372"
     },
     {
       "id": "script_renderneedsattention",
@@ -619,7 +583,7 @@
       "file_type": "code",
       "norm_label": "renderneedsattention()",
       "source_file": "script.js",
-      "source_location": "L4260"
+      "source_location": "L4293"
     },
     {
       "id": "script_renderopscounts",
@@ -644,18 +608,6 @@
       "norm_label": "renderopsqueue()",
       "source_file": "script.js",
       "source_location": "L4155"
-    },
-    {
-      "id": "script_renderroutechargerslist",
-      "label": "renderRouteChargersList()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 0,
-      "community_name": "script.js",
-      "file_type": "code",
-      "norm_label": "renderroutechargerslist()",
-      "source_file": "script.js",
-      "source_location": "L2718"
     },
     {
       "id": "script_restoresession",
@@ -727,7 +679,7 @@
       "file_type": "code",
       "norm_label": "startadminautorefresh()",
       "source_file": "script.js",
-      "source_location": "L4495"
+      "source_location": "L4528"
     },
     {
       "id": "script_startgeolocationtracking",
@@ -763,7 +715,19 @@
       "file_type": "code",
       "norm_label": "stopadminautorefresh()",
       "source_file": "script.js",
-      "source_location": "L4504"
+      "source_location": "L4537"
+    },
+    {
+      "id": "script_syncdatabasestate",
+      "label": "syncDatabaseState()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 0,
+      "community_name": "script.js",
+      "file_type": "code",
+      "norm_label": "syncdatabasestate()",
+      "source_file": "script.js",
+      "source_location": "L376"
     },
     {
       "id": "script_togglesimulator",
@@ -1126,16 +1090,112 @@
       "source_location": "L7"
     },
     {
+      "id": "script_createinfowindowcontent",
+      "label": "createInfoWindowContent()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 12,
+      "community_name": "getStationType",
+      "file_type": "code",
+      "norm_label": "createinfowindowcontent()",
+      "source_file": "script.js",
+      "source_location": "L800"
+    },
+    {
       "id": "script_evaluatestationwithml",
       "label": "evaluateStationWithML()",
       "_callable": true,
       "_origin": "ast",
       "community": 12,
-      "community_name": "evaluateStationWithML",
+      "community_name": "getStationType",
       "file_type": "code",
       "norm_label": "evaluatestationwithml()",
       "source_file": "script.js",
       "source_location": "L1179"
+    },
+    {
+      "id": "script_fetchlivegridtelemetry",
+      "label": "fetchLiveGridTelemetry()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 12,
+      "community_name": "getStationType",
+      "file_type": "code",
+      "norm_label": "fetchlivegridtelemetry()",
+      "source_file": "script.js",
+      "source_location": "L1302"
+    },
+    {
+      "id": "script_getgridstressindex",
+      "label": "getGridStressIndex()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 12,
+      "community_name": "getStationType",
+      "file_type": "code",
+      "norm_label": "getgridstressindex()",
+      "source_file": "script.js",
+      "source_location": "L1103"
+    },
+    {
+      "id": "script_getstationgridloadandprice",
+      "label": "getStationGridLoadAndPrice()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 12,
+      "community_name": "getStationType",
+      "file_type": "code",
+      "norm_label": "getstationgridloadandprice()",
+      "source_file": "script.js",
+      "source_location": "L1233"
+    },
+    {
+      "id": "script_getstationtype",
+      "label": "getStationType()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 12,
+      "community_name": "getStationType",
+      "file_type": "code",
+      "norm_label": "getstationtype()",
+      "source_file": "script.js",
+      "source_location": "L2791"
+    },
+    {
+      "id": "script_gettrustbadgehtml",
+      "label": "getTrustBadgeHTML()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 12,
+      "community_name": "getStationType",
+      "file_type": "code",
+      "norm_label": "gettrustbadgehtml()",
+      "source_file": "script.js",
+      "source_location": "L215"
+    },
+    {
+      "id": "script_logchargerdiversion",
+      "label": "logChargerDiversion()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 12,
+      "community_name": "getStationType",
+      "file_type": "code",
+      "norm_label": "logchargerdiversion()",
+      "source_file": "script.js",
+      "source_location": "L143"
+    },
+    {
+      "id": "script_renderroutechargerslist",
+      "label": "renderRouteChargersList()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 12,
+      "community_name": "getStationType",
+      "file_type": "code",
+      "norm_label": "renderroutechargerslist()",
+      "source_file": "script.js",
+      "source_location": "L2718"
     },
     {
       "id": "script_stationrecommendationmlp_constructor",
@@ -1143,7 +1203,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 12,
-      "community_name": "evaluateStationWithML",
+      "community_name": "getStationType",
       "file_type": "code",
       "norm_label": ".constructor()",
       "source_file": "script.js",
@@ -1155,7 +1215,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 12,
-      "community_name": "evaluateStationWithML",
+      "community_name": "getStationType",
       "file_type": "code",
       "norm_label": ".predict()",
       "source_file": "script.js",
@@ -1167,7 +1227,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 12,
-      "community_name": "evaluateStationWithML",
+      "community_name": "getStationType",
       "file_type": "code",
       "norm_label": ".relu()",
       "source_file": "script.js",
@@ -1179,7 +1239,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 12,
-      "community_name": "evaluateStationWithML",
+      "community_name": "getStationType",
       "file_type": "code",
       "norm_label": ".sigmoid()",
       "source_file": "script.js",
@@ -1196,18 +1256,6 @@
       "norm_label": "fetchallindiachargers()",
       "source_file": "script.js",
       "source_location": "L1357"
-    },
-    {
-      "id": "script_getgridstressindex",
-      "label": "getGridStressIndex()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 2,
-      "community_name": "index.html - single-page shell (login, user app, admin console)",
-      "file_type": "code",
-      "norm_label": "getgridstressindex()",
-      "source_file": "script.js",
-      "source_location": "L1103"
     },
     {
       "id": "script_loadadmindashboard",
@@ -1234,6 +1282,18 @@
       "source_location": "L3355"
     },
     {
+      "id": "script_loadmyimpact",
+      "label": "loadMyImpact()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 2,
+      "community_name": "index.html - single-page shell (login, user app, admin console)",
+      "file_type": "code",
+      "norm_label": "loadmyimpact()",
+      "source_file": "script.js",
+      "source_location": "L2365"
+    },
+    {
       "id": "script_markadminsynced",
       "label": "markAdminSynced()",
       "_callable": true,
@@ -1243,7 +1303,7 @@
       "file_type": "code",
       "norm_label": "markadminsynced()",
       "source_file": "script.js",
-      "source_location": "L4486"
+      "source_location": "L4519"
     },
     {
       "id": "script_renderadmincharts",
@@ -1280,6 +1340,18 @@
       "norm_label": "renderpricingmetrics()",
       "source_file": "script.js",
       "source_location": "L3010"
+    },
+    {
+      "id": "script_renderprofiledetails",
+      "label": "renderProfileDetails()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 2,
+      "community_name": "index.html - single-page shell (login, user app, admin console)",
+      "file_type": "code",
+      "norm_label": "renderprofiledetails()",
+      "source_file": "script.js",
+      "source_location": "L2265"
     },
     {
       "id": "api_handler_requireadmin",
@@ -1462,54 +1534,6 @@
       "source_location": "L274"
     },
     {
-      "id": "script_loadmyimpact",
-      "label": "loadMyImpact()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 7,
-      "community_name": "logChargerDiversion",
-      "file_type": "code",
-      "norm_label": "loadmyimpact()",
-      "source_file": "script.js",
-      "source_location": "L2365"
-    },
-    {
-      "id": "script_logchargerdiversion",
-      "label": "logChargerDiversion()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 7,
-      "community_name": "logChargerDiversion",
-      "file_type": "code",
-      "norm_label": "logchargerdiversion()",
-      "source_file": "script.js",
-      "source_location": "L143"
-    },
-    {
-      "id": "script_renderprofiledetails",
-      "label": "renderProfileDetails()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 7,
-      "community_name": "logChargerDiversion",
-      "file_type": "code",
-      "norm_label": "renderprofiledetails()",
-      "source_file": "script.js",
-      "source_location": "L2265"
-    },
-    {
-      "id": "script_syncdatabasestate",
-      "label": "syncDatabaseState()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 8,
-      "community_name": "syncDatabaseState",
-      "file_type": "code",
-      "norm_label": "syncdatabasestate()",
-      "source_file": "script.js",
-      "source_location": "L376"
-    },
-    {
       "id": "script",
       "label": "script.js",
       "_origin": "ast",
@@ -1532,6 +1556,17 @@
       "source_location": "L4076"
     },
     {
+      "id": "script_adminoverrides",
+      "label": "adminOverrides",
+      "_origin": "ast",
+      "community": 0,
+      "community_name": "script.js",
+      "file_type": "code",
+      "norm_label": "adminoverrides",
+      "source_file": "script.js",
+      "source_location": "L37"
+    },
+    {
       "id": "script_allstations",
       "label": "allStations",
       "_origin": "ast",
@@ -1551,7 +1586,18 @@
       "file_type": "code",
       "norm_label": "chartbaseoptions",
       "source_file": "script.js",
-      "source_location": "L4330"
+      "source_location": "L4363"
+    },
+    {
+      "id": "script_communityreports",
+      "label": "communityReports",
+      "_origin": "ast",
+      "community": 0,
+      "community_name": "script.js",
+      "file_type": "code",
+      "norm_label": "communityreports",
+      "source_file": "script.js",
+      "source_location": "L38"
     },
     {
       "id": "script_ocm_status_map",
@@ -2090,6 +2136,17 @@
       "source_location": "L4"
     },
     {
+      "id": "script_markermap",
+      "label": "markerMap",
+      "_origin": "ast",
+      "community": 12,
+      "community_name": "getStationType",
+      "file_type": "code",
+      "norm_label": "markermap",
+      "source_file": "script.js",
+      "source_location": "L5"
+    },
+    {
       "id": "vercel_api_handler_js_maxduration",
       "label": "maxDuration",
       "_origin": "ast",
@@ -2176,17 +2233,6 @@
       "norm_label": "app_shell",
       "source_file": "sw.js",
       "source_location": "L10"
-    },
-    {
-      "id": "script_markermap",
-      "label": "markerMap",
-      "_origin": "ast",
-      "community": 2,
-      "community_name": "index.html - single-page shell (login, user app, admin console)",
-      "file_type": "code",
-      "norm_label": "markermap",
-      "source_file": "script.js",
-      "source_location": "L5"
     },
     {
       "id": "lib_auth",
@@ -2497,28 +2543,6 @@
       "source_location": "L310"
     },
     {
-      "id": "script_adminoverrides",
-      "label": "adminOverrides",
-      "_origin": "ast",
-      "community": 8,
-      "community_name": "syncDatabaseState",
-      "file_type": "code",
-      "norm_label": "adminoverrides",
-      "source_file": "script.js",
-      "source_location": "L37"
-    },
-    {
-      "id": "script_communityreports",
-      "label": "communityReports",
-      "_origin": "ast",
-      "community": 8,
-      "community_name": "syncDatabaseState",
-      "file_type": "code",
-      "norm_label": "communityreports",
-      "source_file": "script.js",
-      "source_location": "L38"
-    },
-    {
       "id": "script_activerouteinfo",
       "label": "activeRouteInfo",
       "_origin": "semantic",
@@ -2564,6 +2588,21 @@
       "source_url": null
     },
     {
+      "id": "script_overridechargerstatus",
+      "label": "window.overrideChargerStatus()",
+      "_origin": "semantic",
+      "author": null,
+      "captured_at": null,
+      "community": 0,
+      "community_name": "script.js",
+      "contributor": null,
+      "file_type": "code",
+      "norm_label": "window.overridechargerstatus()",
+      "source_file": "script.js",
+      "source_location": "script.js:3422",
+      "source_url": null
+    },
+    {
       "id": "script_recommendedstation",
       "label": "recommendedStation",
       "_origin": "semantic",
@@ -2579,21 +2618,6 @@
       "source_url": null
     },
     {
-      "id": "script_removechargerstopover",
-      "label": "window.removeChargerStopover()",
-      "_origin": "semantic",
-      "author": null,
-      "captured_at": null,
-      "community": 0,
-      "community_name": "script.js",
-      "contributor": null,
-      "file_type": "code",
-      "norm_label": "window.removechargerstopover()",
-      "source_file": "script.js",
-      "source_location": "script.js:2547",
-      "source_url": null
-    },
-    {
       "id": "script_submitchargerreport",
       "label": "window.submitChargerReport()",
       "_origin": "semantic",
@@ -2606,36 +2630,6 @@
       "norm_label": "window.submitchargerreport()",
       "source_file": "script.js",
       "source_location": "script.js:601",
-      "source_url": null
-    },
-    {
-      "id": "script_togglebookmarkstation",
-      "label": "window.toggleBookmarkStation()",
-      "_origin": "semantic",
-      "author": null,
-      "captured_at": null,
-      "community": 0,
-      "community_name": "script.js",
-      "contributor": null,
-      "file_type": "code",
-      "norm_label": "window.togglebookmarkstation()",
-      "source_file": "script.js",
-      "source_location": "script.js:660",
-      "source_url": null
-    },
-    {
-      "id": "script_togglestationdetails",
-      "label": "window.toggleStationDetails()",
-      "_origin": "semantic",
-      "author": null,
-      "captured_at": null,
-      "community": 0,
-      "community_name": "script.js",
-      "contributor": null,
-      "file_type": "code",
-      "norm_label": "window.togglestationdetails()",
-      "source_file": "script.js",
-      "source_location": "script.js:807",
       "source_url": null
     },
     {
@@ -2712,6 +2706,21 @@
       "norm_label": "post /api/admin/station/update",
       "source_file": "api/handler.js",
       "source_location": "api/handler.js:906",
+      "source_url": null
+    },
+    {
+      "id": "api_analytics_event",
+      "label": "POST /api/analytics/event",
+      "_origin": "semantic",
+      "author": null,
+      "captured_at": null,
+      "community": 1,
+      "community_name": "handler.js",
+      "contributor": null,
+      "file_type": "code",
+      "norm_label": "post /api/analytics/event",
+      "source_file": "api/handler.js",
+      "source_location": "api/handler.js:1014",
       "source_url": null
     },
     {
@@ -3137,13 +3146,178 @@
       "source_url": null
     },
     {
+      "id": "script_impact_analytics_pipeline",
+      "label": "Impact/Sustainability Analytics Pipeline (session_start / route_planned / charger_diverted -> kWh/CO2/revenue estimates)",
+      "_origin": "semantic",
+      "author": null,
+      "captured_at": null,
+      "community": 1,
+      "community_name": "handler.js",
+      "contributor": null,
+      "file_type": "rationale",
+      "norm_label": "impact/sustainability analytics pipeline (session_start / route_planned / charger_diverted -> kwh/co2/revenue estimates)",
+      "source_file": "script.js",
+      "source_location": null,
+      "source_url": null
+    },
+    {
+      "id": "script_activewaypoint",
+      "label": "activeWaypoint (charger stopover)",
+      "_origin": "semantic",
+      "author": null,
+      "captured_at": null,
+      "community": 12,
+      "community_name": "getStationType",
+      "contributor": null,
+      "file_type": "code",
+      "norm_label": "activewaypoint (charger stopover)",
+      "source_file": "script.js",
+      "source_location": "script.js:36",
+      "source_url": null
+    },
+    {
+      "id": "script_addchargerstopover",
+      "label": "window.addChargerStopover()",
+      "_origin": "semantic",
+      "author": null,
+      "captured_at": null,
+      "community": 12,
+      "community_name": "getStationType",
+      "contributor": null,
+      "file_type": "code",
+      "norm_label": "window.addchargerstopover()",
+      "source_file": "script.js",
+      "source_location": "script.js:2534",
+      "source_url": null
+    },
+    {
+      "id": "script_filteradminmappins",
+      "label": "window.filterAdminMapPins()",
+      "_origin": "semantic",
+      "author": null,
+      "captured_at": null,
+      "community": 12,
+      "community_name": "getStationType",
+      "contributor": null,
+      "file_type": "code",
+      "norm_label": "window.filteradminmappins()",
+      "source_file": "script.js",
+      "source_location": "script.js:3197",
+      "source_url": null
+    },
+    {
+      "id": "script_focusstationonmap",
+      "label": "window.focusStationOnMap()",
+      "_origin": "semantic",
+      "author": null,
+      "captured_at": null,
+      "community": 12,
+      "community_name": "getStationType",
+      "contributor": null,
+      "file_type": "code",
+      "norm_label": "window.focusstationonmap()",
+      "source_file": "script.js",
+      "source_location": "script.js:852",
+      "source_url": null
+    },
+    {
+      "id": "script_livegriddemand",
+      "label": "liveGridDemand (Atlas telemetry cache)",
+      "_origin": "semantic",
+      "author": null,
+      "captured_at": null,
+      "community": 12,
+      "community_name": "getStationType",
+      "contributor": null,
+      "file_type": "code",
+      "norm_label": "livegriddemand (atlas telemetry cache)",
+      "source_file": "script.js",
+      "source_location": "script.js:29",
+      "source_url": null
+    },
+    {
+      "id": "script_removechargerstopover",
+      "label": "window.removeChargerStopover()",
+      "_origin": "semantic",
+      "author": null,
+      "captured_at": null,
+      "community": 12,
+      "community_name": "getStationType",
+      "contributor": null,
+      "file_type": "code",
+      "norm_label": "window.removechargerstopover()",
+      "source_file": "script.js",
+      "source_location": "script.js:2547",
+      "source_url": null
+    },
+    {
+      "id": "script_selectstationasdestination",
+      "label": "window.selectStationAsDestination()",
+      "_origin": "semantic",
+      "author": null,
+      "captured_at": null,
+      "community": 12,
+      "community_name": "getStationType",
+      "contributor": null,
+      "file_type": "code",
+      "norm_label": "window.selectstationasdestination()",
+      "source_file": "script.js",
+      "source_location": "script.js:820",
+      "source_url": null
+    },
+    {
+      "id": "script_togglebookmarkstation",
+      "label": "window.toggleBookmarkStation()",
+      "_origin": "semantic",
+      "author": null,
+      "captured_at": null,
+      "community": 12,
+      "community_name": "getStationType",
+      "contributor": null,
+      "file_type": "code",
+      "norm_label": "window.togglebookmarkstation()",
+      "source_file": "script.js",
+      "source_location": "script.js:660",
+      "source_url": null
+    },
+    {
+      "id": "script_togglestationdetails",
+      "label": "window.toggleStationDetails()",
+      "_origin": "semantic",
+      "author": null,
+      "captured_at": null,
+      "community": 12,
+      "community_name": "getStationType",
+      "contributor": null,
+      "file_type": "code",
+      "norm_label": "window.togglestationdetails()",
+      "source_file": "script.js",
+      "source_location": "script.js:807",
+      "source_url": null
+    },
+    {
+      "id": "index_admin_panel_map",
+      "label": "Admin Live Control Map (#admin-panel-map)",
+      "_origin": "semantic",
+      "author": null,
+      "captured_at": null,
+      "community": 12,
+      "community_name": "getStationType",
+      "contributor": null,
+      "file_type": "document",
+      "norm_label": "admin live control map (#admin-panel-map)",
+      "source_file": "index.html",
+      "source_location": null,
+      "source_url": null
+    },
+    {
       "id": "script_mlp_recommendation",
       "label": "6-8-1 MLP Recommendation Network (hardcoded weights)",
       "_origin": "semantic",
       "author": null,
       "captured_at": null,
       "community": 12,
-      "community_name": "evaluateStationWithML",
+      "community_name": "getStationType",
       "contributor": null,
       "file_type": "rationale",
       "norm_label": "6-8-1 mlp recommendation network (hardcoded weights)",
@@ -3272,6 +3446,21 @@
       "source_url": null
     },
     {
+      "id": "script_closeadmineditmodal",
+      "label": "window.closeAdminEditModal()",
+      "_origin": "semantic",
+      "author": null,
+      "captured_at": null,
+      "community": 2,
+      "community_name": "index.html - single-page shell (login, user app, admin console)",
+      "contributor": null,
+      "file_type": "code",
+      "norm_label": "window.closeadmineditmodal()",
+      "source_file": "script.js",
+      "source_location": "script.js:3415",
+      "source_url": null
+    },
+    {
       "id": "script_fillgpslocation",
       "label": "window.fillGPSLocation()",
       "_origin": "semantic",
@@ -3287,36 +3476,6 @@
       "source_url": null
     },
     {
-      "id": "script_filteradminmappins",
-      "label": "window.filterAdminMapPins()",
-      "_origin": "semantic",
-      "author": null,
-      "captured_at": null,
-      "community": 2,
-      "community_name": "index.html - single-page shell (login, user app, admin console)",
-      "contributor": null,
-      "file_type": "code",
-      "norm_label": "window.filteradminmappins()",
-      "source_file": "script.js",
-      "source_location": "script.js:3197",
-      "source_url": null
-    },
-    {
-      "id": "script_focusstationonmap",
-      "label": "window.focusStationOnMap()",
-      "_origin": "semantic",
-      "author": null,
-      "captured_at": null,
-      "community": 2,
-      "community_name": "index.html - single-page shell (login, user app, admin console)",
-      "contributor": null,
-      "file_type": "code",
-      "norm_label": "window.focusstationonmap()",
-      "source_file": "script.js",
-      "source_location": "script.js:852",
-      "source_url": null
-    },
-    {
       "id": "script_hideregistermodal",
       "label": "window.hideRegisterModal()",
       "_origin": "semantic",
@@ -3329,21 +3488,6 @@
       "norm_label": "window.hideregistermodal()",
       "source_file": "script.js",
       "source_location": "script.js:2394",
-      "source_url": null
-    },
-    {
-      "id": "script_livegriddemand",
-      "label": "liveGridDemand (Atlas telemetry cache)",
-      "_origin": "semantic",
-      "author": null,
-      "captured_at": null,
-      "community": 2,
-      "community_name": "index.html - single-page shell (login, user app, admin console)",
-      "contributor": null,
-      "file_type": "code",
-      "norm_label": "livegriddemand (atlas telemetry cache)",
-      "source_file": "script.js",
-      "source_location": "script.js:29",
       "source_url": null
     },
     {
@@ -3389,6 +3533,21 @@
       "norm_label": "window.renderadminstationstable()",
       "source_file": "script.js",
       "source_location": "script.js:3221",
+      "source_url": null
+    },
+    {
+      "id": "script_saveadminstationedit",
+      "label": "window.saveAdminStationEdit()",
+      "_origin": "semantic",
+      "author": null,
+      "captured_at": null,
+      "community": 2,
+      "community_name": "index.html - single-page shell (login, user app, admin console)",
+      "contributor": null,
+      "file_type": "code",
+      "norm_label": "window.saveadminstationedit()",
+      "source_file": "script.js",
+      "source_location": "script.js:3459",
       "source_url": null
     },
     {
@@ -3542,6 +3701,21 @@
       "source_url": null
     },
     {
+      "id": "index_admin_edit_modal",
+      "label": "Admin Station Edit Modal (#admin-edit-station-modal)",
+      "_origin": "semantic",
+      "author": null,
+      "captured_at": null,
+      "community": 2,
+      "community_name": "index.html - single-page shell (login, user app, admin console)",
+      "contributor": null,
+      "file_type": "document",
+      "norm_label": "admin station edit modal (#admin-edit-station-modal)",
+      "source_file": "index.html",
+      "source_location": "index.html:827",
+      "source_url": null
+    },
+    {
       "id": "index_admin_panel_analytics",
       "label": "Admin System Analytics (#admin-panel-analytics)",
       "_origin": "semantic",
@@ -3569,21 +3743,6 @@
       "norm_label": "admin overview incl. impact dashboard + trend chart (#admin-panel-dash)",
       "source_file": "index.html",
       "source_location": "index.html:631",
-      "source_url": null
-    },
-    {
-      "id": "index_admin_panel_map",
-      "label": "Admin Live Control Map (#admin-panel-map)",
-      "_origin": "semantic",
-      "author": null,
-      "captured_at": null,
-      "community": 2,
-      "community_name": "index.html - single-page shell (login, user app, admin console)",
-      "contributor": null,
-      "file_type": "document",
-      "norm_label": "admin live control map (#admin-panel-map)",
-      "source_file": "index.html",
-      "source_location": null,
       "source_url": null
     },
     {
@@ -3677,6 +3836,21 @@
       "source_url": null
     },
     {
+      "id": "index_panel_profile",
+      "label": "Profile Tab incl. Your GridSync Impact card (#panel-profile)",
+      "_origin": "semantic",
+      "author": null,
+      "captured_at": null,
+      "community": 2,
+      "community_name": "index.html - single-page shell (login, user app, admin console)",
+      "contributor": null,
+      "file_type": "document",
+      "norm_label": "profile tab incl. your gridsync impact card (#panel-profile)",
+      "source_file": "index.html",
+      "source_location": "index.html:508",
+      "source_url": null
+    },
+    {
       "id": "index_register_modal",
       "label": "Registration Modal (#register-modal)",
       "_origin": "semantic",
@@ -3718,21 +3892,6 @@
       "file_type": "document",
       "norm_label": "style.css - dark glass ui system + mobile responsive layer (~3880 lines)",
       "source_file": "style.css",
-      "source_location": null,
-      "source_url": null
-    },
-    {
-      "id": "script_grid_stress_index",
-      "label": "Grid Stress Index (0-1 from demand MW + frequency Hz)",
-      "_origin": "semantic",
-      "author": null,
-      "captured_at": null,
-      "community": 2,
-      "community_name": "index.html - single-page shell (login, user app, admin console)",
-      "contributor": null,
-      "file_type": "rationale",
-      "norm_label": "grid stress index (0-1 from demand mw + frequency hz)",
-      "source_file": "script.js",
       "source_location": null,
       "source_url": null
     },
@@ -4008,18 +4167,18 @@
       "source_url": null
     },
     {
-      "id": "api_analytics_event",
-      "label": "POST /api/analytics/event",
+      "id": "script_grid_stress_index",
+      "label": "Grid Stress Index (0-1 from demand MW + frequency Hz)",
       "_origin": "semantic",
       "author": null,
       "captured_at": null,
-      "community": 7,
-      "community_name": "logChargerDiversion",
+      "community": 6,
+      "community_name": "GET /api/grid-demand",
       "contributor": null,
-      "file_type": "code",
-      "norm_label": "post /api/analytics/event",
-      "source_file": "api/handler.js",
-      "source_location": "api/handler.js:1014",
+      "file_type": "rationale",
+      "norm_label": "grid stress index (0-1 from demand mw + frequency hz)",
+      "source_file": "script.js",
+      "source_location": null,
       "source_url": null
     },
     {
@@ -4029,42 +4188,12 @@
       "author": null,
       "captured_at": null,
       "community": 7,
-      "community_name": "logChargerDiversion",
+      "community_name": "window.handleAuthLogin",
       "contributor": null,
       "file_type": "code",
       "norm_label": "activeuser (session identity)",
       "source_file": "script.js",
       "source_location": "script.js:35",
-      "source_url": null
-    },
-    {
-      "id": "script_activewaypoint",
-      "label": "activeWaypoint (charger stopover)",
-      "_origin": "semantic",
-      "author": null,
-      "captured_at": null,
-      "community": 7,
-      "community_name": "logChargerDiversion",
-      "contributor": null,
-      "file_type": "code",
-      "norm_label": "activewaypoint (charger stopover)",
-      "source_file": "script.js",
-      "source_location": "script.js:36",
-      "source_url": null
-    },
-    {
-      "id": "script_addchargerstopover",
-      "label": "window.addChargerStopover()",
-      "_origin": "semantic",
-      "author": null,
-      "captured_at": null,
-      "community": 7,
-      "community_name": "logChargerDiversion",
-      "contributor": null,
-      "file_type": "code",
-      "norm_label": "window.addchargerstopover()",
-      "source_file": "script.js",
-      "source_location": "script.js:2534",
       "source_url": null
     },
     {
@@ -4074,7 +4203,7 @@
       "author": null,
       "captured_at": null,
       "community": 7,
-      "community_name": "logChargerDiversion",
+      "community_name": "window.handleAuthLogin",
       "contributor": null,
       "file_type": "code",
       "norm_label": "window.handleauthlogin()",
@@ -4089,7 +4218,7 @@
       "author": null,
       "captured_at": null,
       "community": 7,
-      "community_name": "logChargerDiversion",
+      "community_name": "window.handleAuthLogin",
       "contributor": null,
       "file_type": "code",
       "norm_label": "window.handleauthlogout()",
@@ -4104,27 +4233,12 @@
       "author": null,
       "captured_at": null,
       "community": 7,
-      "community_name": "logChargerDiversion",
+      "community_name": "window.handleAuthLogin",
       "contributor": null,
       "file_type": "code",
       "norm_label": "loganalyticsevent() - fire-and-forget post to /api/analytics/event",
       "source_file": "script.js",
       "source_location": "script.js:50",
-      "source_url": null
-    },
-    {
-      "id": "script_selectstationasdestination",
-      "label": "window.selectStationAsDestination()",
-      "_origin": "semantic",
-      "author": null,
-      "captured_at": null,
-      "community": 7,
-      "community_name": "logChargerDiversion",
-      "contributor": null,
-      "file_type": "code",
-      "norm_label": "window.selectstationasdestination()",
-      "source_file": "script.js",
-      "source_location": "script.js:820",
       "source_url": null
     },
     {
@@ -4134,7 +4248,7 @@
       "author": null,
       "captured_at": null,
       "community": 7,
-      "community_name": "logChargerDiversion",
+      "community_name": "window.handleAuthLogin",
       "contributor": null,
       "file_type": "code",
       "norm_label": "window.showregistermodal()",
@@ -4149,7 +4263,7 @@
       "author": null,
       "captured_at": null,
       "community": 7,
-      "community_name": "logChargerDiversion",
+      "community_name": "window.handleAuthLogin",
       "contributor": null,
       "file_type": "code",
       "norm_label": "window.switchloginrole()",
@@ -4164,102 +4278,12 @@
       "author": null,
       "captured_at": null,
       "community": 7,
-      "community_name": "logChargerDiversion",
+      "community_name": "window.handleAuthLogin",
       "contributor": null,
       "file_type": "document",
       "norm_label": "login screen (#login-screen, user/admin roles)",
       "source_file": "index.html",
       "source_location": "index.html:27",
-      "source_url": null
-    },
-    {
-      "id": "index_panel_profile",
-      "label": "Profile Tab incl. Your GridSync Impact card (#panel-profile)",
-      "_origin": "semantic",
-      "author": null,
-      "captured_at": null,
-      "community": 7,
-      "community_name": "logChargerDiversion",
-      "contributor": null,
-      "file_type": "document",
-      "norm_label": "profile tab incl. your gridsync impact card (#panel-profile)",
-      "source_file": "index.html",
-      "source_location": "index.html:508",
-      "source_url": null
-    },
-    {
-      "id": "script_impact_analytics_pipeline",
-      "label": "Impact/Sustainability Analytics Pipeline (session_start / route_planned / charger_diverted -> kWh/CO2/revenue estimates)",
-      "_origin": "semantic",
-      "author": null,
-      "captured_at": null,
-      "community": 7,
-      "community_name": "logChargerDiversion",
-      "contributor": null,
-      "file_type": "rationale",
-      "norm_label": "impact/sustainability analytics pipeline (session_start / route_planned / charger_diverted -> kwh/co2/revenue estimates)",
-      "source_file": "script.js",
-      "source_location": null,
-      "source_url": null
-    },
-    {
-      "id": "script_closeadmineditmodal",
-      "label": "window.closeAdminEditModal()",
-      "_origin": "semantic",
-      "author": null,
-      "captured_at": null,
-      "community": 8,
-      "community_name": "syncDatabaseState",
-      "contributor": null,
-      "file_type": "code",
-      "norm_label": "window.closeadmineditmodal()",
-      "source_file": "script.js",
-      "source_location": "script.js:3415",
-      "source_url": null
-    },
-    {
-      "id": "script_overridechargerstatus",
-      "label": "window.overrideChargerStatus()",
-      "_origin": "semantic",
-      "author": null,
-      "captured_at": null,
-      "community": 8,
-      "community_name": "syncDatabaseState",
-      "contributor": null,
-      "file_type": "code",
-      "norm_label": "window.overridechargerstatus()",
-      "source_file": "script.js",
-      "source_location": "script.js:3422",
-      "source_url": null
-    },
-    {
-      "id": "script_saveadminstationedit",
-      "label": "window.saveAdminStationEdit()",
-      "_origin": "semantic",
-      "author": null,
-      "captured_at": null,
-      "community": 8,
-      "community_name": "syncDatabaseState",
-      "contributor": null,
-      "file_type": "code",
-      "norm_label": "window.saveadminstationedit()",
-      "source_file": "script.js",
-      "source_location": "script.js:3459",
-      "source_url": null
-    },
-    {
-      "id": "index_admin_edit_modal",
-      "label": "Admin Station Edit Modal (#admin-edit-station-modal)",
-      "_origin": "semantic",
-      "author": null,
-      "captured_at": null,
-      "community": 8,
-      "community_name": "syncDatabaseState",
-      "contributor": null,
-      "file_type": "document",
-      "norm_label": "admin station edit modal (#admin-edit-station-modal)",
-      "source_file": "index.html",
-      "source_location": "index.html:827",
       "source_url": null
     },
     {
@@ -4819,7 +4843,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "script.js",
-      "source_location": "L4425",
+      "source_location": "L4458",
       "weight": 1.0
     },
     {
@@ -5191,7 +5215,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "script.js",
-      "source_location": "L4318",
+      "source_location": "L4351",
       "weight": 1.0
     },
     {
@@ -5203,7 +5227,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "script.js",
-      "source_location": "L4321",
+      "source_location": "L4354",
       "weight": 1.0
     },
     {
@@ -5215,7 +5239,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "script.js",
-      "source_location": "L4322",
+      "source_location": "L4355",
       "weight": 1.0
     },
     {
@@ -5227,7 +5251,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "script.js",
-      "source_location": "L4323",
+      "source_location": "L4356",
       "weight": 1.0
     },
     {
@@ -5239,7 +5263,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "script.js",
-      "source_location": "L4285",
+      "source_location": "L4318",
       "weight": 1.0
     },
     {
@@ -5251,7 +5275,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "script.js",
-      "source_location": "L4289",
+      "source_location": "L4322",
       "weight": 1.0
     },
     {
@@ -5627,6 +5651,66 @@
       "weight": 1.0
     },
     {
+      "source": "script_openopsresolvemodal",
+      "target": "script_stationnamefor",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "script.js",
+      "source_location": "L4230",
+      "weight": 1.0
+    },
+    {
+      "source": "script_performtriage",
+      "target": "script_apifetch",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "script.js",
+      "source_location": "L4251",
+      "weight": 1.0
+    },
+    {
+      "source": "script_performtriage",
+      "target": "script_showtoastnotification",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "script.js",
+      "source_location": "L4259",
+      "weight": 1.0
+    },
+    {
+      "source": "script_performtriage",
+      "target": "script_loadopsqueue",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "script.js",
+      "source_location": "L4264",
+      "weight": 1.0
+    },
+    {
+      "source": "script_performtriage",
+      "target": "script_loadadminaudit",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "script.js",
+      "source_location": "L4265",
+      "weight": 1.0
+    },
+    {
       "source": "script_plantrip",
       "target": "script_ismapsapiready",
       "relation": "calls",
@@ -5851,7 +5935,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "script.js",
-      "source_location": "L4306",
+      "source_location": "L4339",
       "weight": 1.0
     },
     {
@@ -5863,7 +5947,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "script.js",
-      "source_location": "L4306",
+      "source_location": "L4339",
       "weight": 1.0
     },
     {
@@ -5875,7 +5959,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "script.js",
-      "source_location": "L4309",
+      "source_location": "L4342",
       "weight": 1.0
     },
     {
@@ -5887,7 +5971,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "script.js",
-      "source_location": "L4272",
+      "source_location": "L4305",
       "weight": 1.0
     },
     {
@@ -5899,7 +5983,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "script.js",
-      "source_location": "L4272",
+      "source_location": "L4305",
       "weight": 1.0
     },
     {
@@ -5911,7 +5995,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "script.js",
-      "source_location": "L4275",
+      "source_location": "L4308",
       "weight": 1.0
     },
     {
@@ -6007,7 +6091,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "script.js",
-      "source_location": "L4496",
+      "source_location": "L4529",
       "weight": 1.0
     },
     {
@@ -7968,13 +8052,35 @@
     },
     {
       "source": "script",
+      "target": "script_openopsresolvemodal",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "script.js",
+      "source_location": "L4225",
+      "weight": 1.0
+    },
+    {
+      "source": "script",
+      "target": "script_performtriage",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "script.js",
+      "source_location": "L4249",
+      "weight": 1.0
+    },
+    {
+      "source": "script",
       "target": "script_renderneedsattention",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "script.js",
-      "source_location": "L4260",
+      "source_location": "L4293",
       "weight": 1.0
     },
     {
@@ -7985,7 +8091,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "script.js",
-      "source_location": "L4283",
+      "source_location": "L4316",
       "weight": 1.0
     },
     {
@@ -7996,7 +8102,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "script.js",
-      "source_location": "L4295",
+      "source_location": "L4328",
       "weight": 1.0
     },
     {
@@ -8007,7 +8113,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "script.js",
-      "source_location": "L4316",
+      "source_location": "L4349",
       "weight": 1.0
     },
     {
@@ -8018,7 +8124,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "script.js",
-      "source_location": "L4330",
+      "source_location": "L4363",
       "weight": 1.0
     },
     {
@@ -8029,7 +8135,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "script.js",
-      "source_location": "L4339",
+      "source_location": "L4372",
       "weight": 1.0
     },
     {
@@ -8040,7 +8146,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "script.js",
-      "source_location": "L4361",
+      "source_location": "L4394",
       "weight": 1.0
     },
     {
@@ -8051,7 +8157,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "script.js",
-      "source_location": "L4381",
+      "source_location": "L4414",
       "weight": 1.0
     },
     {
@@ -8062,7 +8168,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "script.js",
-      "source_location": "L4411",
+      "source_location": "L4444",
       "weight": 1.0
     },
     {
@@ -8073,7 +8179,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "script.js",
-      "source_location": "L4486",
+      "source_location": "L4519",
       "weight": 1.0
     },
     {
@@ -8084,7 +8190,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "script.js",
-      "source_location": "L4495",
+      "source_location": "L4528",
       "weight": 1.0
     },
     {
@@ -8095,7 +8201,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "script.js",
-      "source_location": "L4504",
+      "source_location": "L4537",
       "weight": 1.0
     },
     {
@@ -11968,5 +12074,5 @@
       "source_file": "api/handler.js"
     }
   ],
-  "built_at_commit": "803ac488dc07781af35babaac4210c8c929931be"
+  "built_at_commit": "506bff7ced51e527ae2437c3bf6c5c8ab928654f"
 }
